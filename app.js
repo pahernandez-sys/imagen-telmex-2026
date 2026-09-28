@@ -588,7 +588,6 @@ function applyHierarchyFilter() {
   let filtered = catalog.filter(item => {
     if (completedAssetIds.has(String(item.id)) || (item.unique_id && completedAssetIds.has(String(item.unique_id)))) return false; // Excluir activos ya capturados
     if (tipo && item.tipo !== tipo) return false;
-    if (modelType && item.modelo_tipo && item.modelo_tipo.toUpperCase() !== modelType.toUpperCase()) return false;
     if (mode === "MANUAL") {
       if (estadoVal && item.estado !== estadoVal) return false;
       if (areaVal && item.area_trabajo !== areaVal) return false;
@@ -1013,7 +1012,8 @@ async function syncAllToLinkaform() {
     num_viniles: "6a99eb60a20e4f1d25581b72",
     oferta_colocada: "6a99eb8af9c750d6db214c5d",
     foto_despues: "6a99e764f9c750d6db214c54",
-    tipo_trabajo: "6ab9cdfec4fc804d8c8e088c"
+    tipo_trabajo: "6ab9cdfec4fc804d8c8e088c",
+    modelo_caja_caseta: "6ab9d647dba7a0c191e6a0f6"
   };
 
   let successCount = 0;
@@ -1033,21 +1033,19 @@ async function syncAllToLinkaform() {
     const unique_id = String(ev.unique_id || asset_id);
     const lat_val = ev.gps_captura_lat !== null && ev.gps_captura_lat !== undefined ? ev.gps_captura_lat : (ev.lat_original || 0);
     const lon_val = ev.gps_captura_lon !== null && ev.gps_captura_lon !== undefined ? ev.gps_captura_lon : (ev.lon_original || 0);
-
-    const modelo_tag = ev.modelo_tipo ? ` (${ev.modelo_tipo.toUpperCase()})` : "";
-    const tipo_val = (ev.tipo_elemento || "CASETA").toUpperCase() + modelo_tag;
-    const id_unico_val = unique_id + modelo_tag;
+    const modelo_val = String(ev.modelo_tipo || "NORMAL");
 
     const answers = {
-      [LINKAFORM_FIELDS.tipo]: tipo_val,
+      [LINKAFORM_FIELDS.tipo]: (ev.tipo_elemento || "CASETA").toUpperCase(),
       [LINKAFORM_FIELDS.distrito_telefono]: asset_id,
-      [LINKAFORM_FIELDS.id_unico]: id_unico_val,
+      [LINKAFORM_FIELDS.id_unico]: unique_id,
       [LINKAFORM_FIELDS.latitud]: lat_val,
       [LINKAFORM_FIELDS.longitud]: lon_val,
       [LINKAFORM_FIELDS.hay_caja_caseta]: existencia_val,
       [LINKAFORM_FIELDS.num_viniles]: num_viniles_val,
       [LINKAFORM_FIELDS.oferta_colocada]: oferta_val,
-      [LINKAFORM_FIELDS.tipo_trabajo]: tipo_trabajo_val
+      [LINKAFORM_FIELDS.tipo_trabajo]: tipo_trabajo_val,
+      [LINKAFORM_FIELDS.modelo_caja_caseta]: modelo_val
     };
 
     // Subir Foto DESPUÉS (Campo ID: 6a99e764f9c750d6db214c54)
