@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Imagen Telmex 2026</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0055a5">
+</head>
+<body>
+
+  <!-- Header Sticky -->
+  <header>
+    <div class="header-top">
+      <div class="brand-title">
+        📦 Imagen Telmex 2026
+      </div>
+      <div>
+        <span id="networkStatus" class="status-badge">Modo Local</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- ALERTA DE SELECCION DE ACTIVO -->
+    <div id="activeAssetAlert" class="alert alert-info" style="display: none;">
+      <strong>Activo Seleccionado:</strong> <span id="activeAssetTitle">Ninguno</span>
+    </div>
+
+    <!-- ==================== VISTA 1: BUSQUEDA Y SELECCIÓN ==================== -->
+    <section id="viewSearch" class="view active">
+      
+      <div class="card">
+        <div class="card-title">
+          <span>1. Selección por Jerarquía y Zona</span>
+          <span id="catalogCountBadge" style="font-size:0.75rem; color: var(--text-muted);">Cargando...</span>
+        </div>
+
+        <!-- Modo de Selección: Automático (GPS) vs Manual (Estado / Área) -->
+        <div class="form-group" style="background: #e0f2fe; padding: 10px 12px; border-radius: 8px; border: 1px solid #bae6fd;">
+          <label style="color: #0369a1; font-weight: bold; margin-bottom: 6px;">Modo de Selección:</label>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" id="search_mode_auto" name="searchSelectionMode" value="AUTO" checked onchange="onSearchModeToggle()">
+              <label for="search_mode_auto">⚡ Automático (GPS - 20 más cercanas)</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" id="search_mode_manual" name="searchSelectionMode" value="MANUAL" onchange="onSearchModeToggle()">
+              <label for="search_mode_manual">🔍 Manual (Por Estado y Área)</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 1: Proceso -->
+        <div class="form-group">
+          <label>Paso 1: Proceso / Campaña:</label>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" id="proceso_imagen" name="filterProceso" value="IMAGEN" checked onchange="applyHierarchyFilter()">
+              <label for="proceso_imagen">🖼️ Imagen</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" id="proceso_limpieza" name="filterProceso" value="LIMPIEZA" onchange="applyHierarchyFilter()">
+              <label for="proceso_limpieza">🧹 Limpieza</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 2: Tipo de Elemento -->
+        <div class="form-group">
+          <label>Paso 2: Tipo de Elemento:</label>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" id="elemento_caseta" name="filterTipo" value="CASETA" checked onchange="onElementTypeChange()">
+              <label for="elemento_caseta">📞 Caseta</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" id="elemento_caja" name="filterTipo" value="CAJA" onchange="onElementTypeChange()">
+              <label for="elemento_caja">📦 Caja</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Paso 3: Muestrario Visual de Tipos / Modelos con Imágenes -->
+        <div class="form-group">
+          <label>Paso 3: Modelo de <span id="lblTipoElemento">Caseta</span> (Muestrario Visual):</label>
+          <div id="typeCatalogGrid" class="type-catalog-grid">
+            <!-- Renderizado dinámicamente -->
+          </div>
+          <input type="hidden" id="selectedModelType" value="">
+        </div>
+
+        <!-- Contenedor de Filtros Manuales (Estado y Área de Trabajo) -->
+        <div id="manualFilterContainer" style="display: none; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px;">
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label>Paso 4: Estado:</label>
+            <select id="filterEstado" onchange="onEstadoChange()">
+              <option value="">-- Seleccionar Estado --</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Área de Trabajo:</label>
+            <select id="filterArea" onchange="applyHierarchyFilter()">
+              <option value="">-- Seleccionar Área de Trabajo --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Opcional: Búsqueda rápida por ID o Calle -->
+        <div style="margin-top: 10px; font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+          💡 <em>Opcional: Búsqueda directa por ID o Calle</em>
+        </div>
+
+        <div class="form-group" style="margin-top: 6px;">
+          <input type="text" id="inputQuery" placeholder="Escribe ID (ej: ZIH0061 o Teléfono) o Calle..." oninput="onQueryInput()">
+        </div>
+
+      </div>
+
+      <!-- Resultados de Búsqueda -->
+      <div class="card">
+        <div class="card-title">
+          <span id="searchResultsTitle">📍 20 Opciones Más Cercanas a tu Ubicación</span>
+          <span id="resultCount" style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">0 activos</span>
+        </div>
+        <div id="searchResultsList" style="max-height: 400px; overflow-y: auto;">
+          <p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:20px;">
+            📡 Obteniendo ubicación GPS para mostrar las 20 cajas o casetas más cercanas...
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== VISTA 2: CAPTURA DE EVIDENCIA ==================== -->
+    <section id="viewForm" class="view">
+      
+      <div class="card">
+        <div class="card-title">
+          <span>Formulario de Evidencia en Campo</span>
+        </div>
+
+        <form id="evidenceForm" onsubmit="saveEvidence(event)">
+
+          <!-- Datos del activo seleccionado -->
+          <div class="form-group">
+            <label>ID Activo Seleccionado:</label>
+            <input type="text" id="formAssetId" readonly style="background:#e9ecef; font-weight:bold;">
+          </div>
+
+          <div class="form-group">
+            <label>Estado & Área de Trabajo (Auto-asignados):</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="formAssetEstado" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Estado">
+              <input type="text" id="formAssetArea" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Área de Trabajo">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Proceso & Modelo Seleccionado:</label>
+            <input type="text" id="formAssetDetails" readonly style="background:#e9ecef; font-weight:bold; color:var(--primary);">
+          </div>
+
+          <div class="form-group">
+            <label>Ubicación del Activo:</label>
+            <input type="text" id="formAssetInfo" readonly style="background:#e9ecef; font-size:0.85rem;">
+          </div>
+
+          <!-- Campo 1: ¿Existe? -->
+          <div class="form-group">
+            <label>1. ¿Existe la Caja / Caseta en el Sitio?:</label>
+            <div class="radio-group">
+              <div class="radio-pill">
+                <input type="radio" id="exist_si" name="existencia" value="EXISTE" checked>
+                <label for="exist_si">✅ Existe</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="exist_no" name="existencia" value="NO_EXISTE">
+                <label for="exist_no">❌ No Existe</label>
+              </div>
+              <div class="radio-pill">
+                <input type="radio" id="exist_danada" name="existencia" value="DANADA">
+                <label for="exist_danada">⚠️ Dañada</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campo 2: Viniles instalados -->
+          <div class="form-group">
+            <label>2. Número de Viniles Instalados:</label>
+            <select id="numViniles" required>
+              <option value="0">0</option>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+            </select>
+          </div>
+
+          <!-- Campo 3: Oferta colocada -->
+          <div class="form-group">
+            <label>3. Oferta Colocada:</label>
+            <select id="ofertaColocada" required>
+              <option value="120 MB">120 MB</option>
+              <option value="250 MB">250 MB</option>
+            </select>
+          </div>
+
+          <!-- Campo 4: Comentarios -->
+          <div class="form-group">
+            <label>4. Comentarios u Observaciones de Campo:</label>
+            <textarea id="comentarios" rows="3" placeholder="Detalles de la estructura, daños, etc..."></textarea>
+          </div>
+
+          <!-- Campo 5: Fotografías -->
+          <div class="form-group">
+            <label>5. Evidencia Fotográfica (Foto DESPUÉS):</label>
+            
+            <!-- Inputs Ocultos para Foto DESPUÉS -->
+            <input type="file" id="inputCamDespues" accept="image/*" capture="camera" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
+            <input type="file" id="inputGalDespues" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
+
+            <div class="photo-upload-grid" style="grid-template-columns: 1fr;">
+              <!-- Foto Después -->
+              <div class="photo-card">
+                <div class="photo-card-title">Foto DESPUÉS</div>
+                <div class="photo-box" id="boxFotoDespues" onclick="openCameraModal('Despues')">
+                  <span id="iconDespues" style="font-size:1.6rem;">📸</span>
+                  <span class="photo-box-label" id="labelDespues">Sin foto</span>
+                  <img id="previewDespues" style="display:none;">
+                </div>
+                <div class="photo-actions">
+                  <button type="button" class="btn-photo" onclick="openCameraModal('Despues')">
+                    📷 Cámara
+                  </button>
+                  <button type="button" class="btn-photo btn-photo-gallery" onclick="document.getElementById('inputGalDespues').click()">
+                    🖼️ Galería
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Campo 6: GPS Capturado de la Foto -->
+          <div class="form-group" style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
+            <label style="font-size:0.8rem; color:#475569; margin:0;">
+              📍 GPS de Captura en Campo:
+            </label>
+            <div id="formGpsCoords" style="font-size:0.85rem; font-weight:bold; color:var(--primary); margin-top:4px;">
+              Capturando GPS del dispositivo...
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-success">
+            💾 Guardar Evidencia (Modo Offline)
+          </button>
+
+        </form>
+      </div>
+
+    </section>
+
+    <!-- ==================== VISTA 3: SINCRONIZACIÓN Y LOTE ==================== -->
+    <section id="viewSync" class="view">
+      
+      <div class="card">
+        <div class="card-title">
+          <span>Evidencias Guardadas Localmente</span>
+          <span id="syncBadge" class="badge-count">0</span>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:14px;">
+          Estas evidencias están guardadas en el teléfono. Puedes exportarlas a un archivo JSON/Lote o sincronizarlas a la base de datos cuando estés conectado.
+        </p>
+
+        <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:14px;">
+          <button id="btnSyncLinkaform" class="btn btn-success" onclick="syncAllToLinkaform()">
+            🚀 Enviar Todo a Linkaform
+          </button>
+        </div>
+
+        <div id="savedEvidencesList">
+          <p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:20px;">
+            No hay evidencias pendientes en el teléfono.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Navegación Inferior -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="switchView('search')">
+      <span class="nav-icon">🔍</span>
+      <span>Buscar</span>
+    </button>
+    <button class="nav-item" onclick="switchView('form')">
+      <span class="nav-icon">📝</span>
+      <span>Evidencia</span>
+    </button>
+    <button class="nav-item" onclick="switchView('sync')">
+      <span class="nav-icon">☁️</span>
+      <span>Lote (<span id="navCount">0</span>)</span>
+    </button>
+  </nav>
+
+  <!-- Modal de Cámara en Tiempo Real -->
+  <div id="cameraModal" class="modal-overlay" style="display:none;">
+    <div class="camera-modal-content">
+      <div class="camera-modal-header">
+        <span id="cameraModalTitle">📷 Capturar Evidencia</span>
+        <button type="button" class="btn-close-camera" onclick="closeCameraModal()">✕</button>
+      </div>
+      
+      <div class="camera-viewfinder-container">
+        <video id="cameraVideo" autoplay playsinline muted></video>
+      </div>
+
+      <div class="camera-modal-actions">
+        <button type="button" class="btn-camera-capture" onclick="takeSnapshot()">📸 TOMAR FOTO</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn-camera-flip" onclick="flipCamera()">🔄 Cambiar Cámara</button>
+          <button type="button" class="btn-camera-cancel" onclick="closeCameraModal()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Personalizado para Mensajes y Alertas (Elimina 'La página file:// indica') -->
+  <div id="customAlertModal" class="modal-overlay" style="display:none; z-index:100000; background:rgba(15,23,42,0.75);">
+    <div style="background:#ffffff; border-radius:14px; padding:22px 20px; width:88%; max-width:380px; text-align:center; box-shadow:0 12px 32px rgba(0,0,0,0.35); animation: popIn 0.2s ease-out;">
+      <div id="customAlertHeader" style="font-size:1.15rem; font-weight:bold; color:var(--primary); margin-bottom:12px; display:flex; align-items:center; justify-content:center; gap:6px;">
+        <span>📦 Imagen Telmex 2026</span>
+      </div>
+      <div id="customAlertMessage" style="font-size:0.95rem; color:#334155; margin-bottom:20px; line-height:1.45; word-break:break-word;"></div>
+      <button type="button" class="btn btn-primary" onclick="closeCustomAlert()" style="width:100%; font-size:1rem; padding:11px; border-radius:8px; font-weight:bold;">Aceptar</button>
+    </div>
+  </div>
+
+  <!-- Carga dividida del catálogo (<25MB para GitHub) -->
+  <script src="data/catalog_part1.js"></script>
+  <script src="data/catalog_part2.js"></script>
+
+  <!-- Lógica de la PWA (Carga asíncrona de datos para 0 latencia) -->
+  <script src="app.js"></script>
+</body>
+</html>
