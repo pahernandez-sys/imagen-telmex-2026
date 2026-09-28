@@ -1,0 +1,21 @@
+{
+  "name": "Imagen Telmex 2026",
+  "short_name": "Imagen Telmex 2026",
+  "description": "Aplicación Móvil Offline-First para la Campaña Imagen Telmex 2026",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0055a5",
+  "theme_color": "#0055a5",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192/0055a5/ffffff?text=Telmex",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512/0055a5/ffffff?text=Telmex",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
