@@ -12,6 +12,8 @@ let lastKnownOnlineState = null;
 let pendingAsset = null;
 let modalSelectedType = "CASETA";
 let modalSelectedModel = "";
+let userContratista = "";
+let userTecnico = "";
 
 // Catálogo Visual de Modelos para Casetas y Cajas
 const CASETA_MODELS = [
@@ -74,7 +76,77 @@ window.alert = function(msg) {
   showCustomAlert(msg);
 };
 
+function checkUserConfig() {
+  userContratista = localStorage.getItem("TELMEX_CONTRATISTA") || "";
+  userTecnico = localStorage.getItem("TELMEX_TECNICO") || "";
+
+  updateHeaderUserInfo();
+  updateFormUserDisplay();
+
+  if (!userContratista || !userTecnico) {
+    openUserSetupModal();
+  }
+}
+
+function openUserSetupModal() {
+  const contratistaSelect = document.getElementById("setupContratista");
+  const tecnicoInput = document.getElementById("setupTecnico");
+  if (contratistaSelect) contratistaSelect.value = userContratista;
+  if (tecnicoInput) tecnicoInput.value = userTecnico;
+  const modal = document.getElementById("userSetupModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeUserSetupModal() {
+  const modal = document.getElementById("userSetupModal");
+  if (modal) modal.style.display = "none";
+}
+
+function saveUserConfig() {
+  const contratista = document.getElementById("setupContratista")?.value?.trim() || "";
+  const tecnico = document.getElementById("setupTecnico")?.value?.trim() || "";
+
+  if (!contratista) {
+    alert("⚠️ Por favor selecciona tu Contratista / Socio Comercial.");
+    return;
+  }
+  if (!tecnico) {
+    alert("⚠️ Por favor escribe tu Nombre de Técnico en Sitio.");
+    return;
+  }
+
+  userContratista = contratista;
+  userTecnico = tecnico;
+
+  localStorage.setItem("TELMEX_CONTRATISTA", userContratista);
+  localStorage.setItem("TELMEX_TECNICO", userTecnico);
+
+  updateHeaderUserInfo();
+  updateFormUserDisplay();
+  closeUserSetupModal();
+}
+
+function updateHeaderUserInfo() {
+  const el = document.getElementById("headerUserInfo");
+  if (el) {
+    if (userContratista && userTecnico) {
+      const firstTechName = userTecnico.split(" ")[0];
+      el.innerText = `${userContratista} (${firstTechName})`;
+    } else {
+      el.innerText = "Configurar Técnico";
+    }
+  }
+}
+
+function updateFormUserDisplay() {
+  const contratistaEl = document.getElementById("formContratista");
+  const tecnicoEl = document.getElementById("formTecnico");
+  if (contratistaEl) contratistaEl.value = userContratista || "Sin configurar";
+  if (tecnicoEl) tecnicoEl.value = userTecnico || "Sin configurar";
+}
+
 function initApp() {
+  checkUserConfig();
   loadEvidencesFromStorage();
   updateDailyGoalUI();
   
@@ -811,18 +883,24 @@ function handlePhotoSelect(event, type) {
 function saveEvidence(event) {
   event.preventDefault();
 
+  if (!userContratista || !userTecnico) {
+    alert("⚠️ Debes configurar primero tu Contratista y Nombre de Técnico.");
+    openUserSetupModal();
+    return;
+  }
+
   if (!selectedAsset) {
     alert("Error: No hay ningún activo seleccionado.");
     return;
   }
 
   if (!photoDespuesBase64) {
-    alert("⚠️ Por favor toma o selecciona la Foto DESPUÉS para continuar.");
+    alert("⚠️ Por favor toma la Foto DESPUÉS para continuar.");
     return;
   }
 
   if (!selectedModelFilter) {
-    alert("⚠️ Error: Debes seleccionar el Modelo de " + (selectedAsset.tipo === "CASETA" ? "Caseta" : "Caja") + " en el Paso 3 antes de guardar el registro.");
+    alert("⚠️ Error: Debes seleccionar el Modelo de " + (selectedAsset.tipo === "CASETA" ? "Caseta" : "Caja") + " antes de guardar el registro.");
     return;
   }
 
@@ -839,6 +917,8 @@ function saveEvidence(event) {
     id_registro_local: "EV_" + Date.now(),
     unique_id: uniqueId,
     asset_id: selectedAsset.id,
+    contratista: userContratista,
+    tecnico: userTecnico,
     proceso: proceso,
     tipo_elemento: selectedAsset.tipo,
     modelo_tipo: selectedModelFilter,
@@ -1122,7 +1202,9 @@ async function syncAllToLinkaform() {
     oferta_colocada: "6a99eb8af9c750d6db214c5d",
     foto_despues: "6a99e764f9c750d6db214c54",
     tipo_trabajo: "6ab9cdfec4fc804d8c8e088c",
-    modelo_caja_caseta: "6ab9d647dba7a0c191e6a0f6"
+    modelo_caja_caseta: "6ab9d647dba7a0c191e6a0f6",
+    contratista: "6abe9357bef08742fcf94020",
+    tecnico: "6abe9357bef08742fcf94021"
   };
 
   let successCount = 0;
@@ -1143,6 +1225,8 @@ async function syncAllToLinkaform() {
     const lat_val = ev.gps_captura_lat !== null && ev.gps_captura_lat !== undefined ? ev.gps_captura_lat : (ev.lat_original || 0);
     const lon_val = ev.gps_captura_lon !== null && ev.gps_captura_lon !== undefined ? ev.gps_captura_lon : (ev.lon_original || 0);
     const modelo_val = String(ev.modelo_tipo || "NORMAL");
+    const contratista_val = String(ev.contratista || userContratista || "N/A");
+    const tecnico_val = String(ev.tecnico || userTecnico || "N/A");
 
     const answers = {
       [LINKAFORM_FIELDS.tipo]: (ev.tipo_elemento || "CASETA").toUpperCase(),
@@ -1154,7 +1238,9 @@ async function syncAllToLinkaform() {
       [LINKAFORM_FIELDS.num_viniles]: num_viniles_val,
       [LINKAFORM_FIELDS.oferta_colocada]: oferta_val,
       [LINKAFORM_FIELDS.tipo_trabajo]: tipo_trabajo_val,
-      [LINKAFORM_FIELDS.modelo_caja_caseta]: modelo_val
+      [LINKAFORM_FIELDS.modelo_caja_caseta]: modelo_val,
+      [LINKAFORM_FIELDS.contratista]: contratista_val,
+      [LINKAFORM_FIELDS.tecnico]: tecnico_val
     };
 
     // Subir Foto DESPUÉS (Campo ID: 6a99e764f9c750d6db214c54)

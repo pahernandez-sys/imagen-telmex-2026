@@ -16,7 +16,10 @@
       <div class="brand-title">
         📦 Imagen Telmex 2026
       </div>
-      <div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <button type="button" onclick="openUserSetupModal()" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
+          👤 <span id="headerUserInfo">Técnico</span> ⚙️
+        </button>
         <span id="networkStatus" class="status-badge">Modo Local</span>
       </div>
     </div>
@@ -139,6 +142,14 @@
         <form id="evidenceForm" onsubmit="saveEvidence(event)">
 
           <!-- Datos del activo seleccionado -->
+          <div class="form-group">
+            <label>Contratista & Técnico en Sitio (Guardados):</label>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="formContratista" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Contratista">
+              <input type="text" id="formTecnico" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Técnico">
+            </div>
+          </div>
+
           <div class="form-group">
             <label>ID Activo Seleccionado:</label>
             <input type="text" id="formAssetId" readonly style="background:#e9ecef; font-weight:bold;">
@@ -349,6 +360,37 @@
           Continuar a Evidencia ➔
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal de Configuración de Técnico y Contratista / Socio Comercial -->
+  <div id="userSetupModal" class="modal-overlay" style="display:none; z-index:999999; background:rgba(15,23,42,0.85);">
+    <div style="background:#ffffff; border-radius:14px; padding:22px 20px; width:92%; max-width:400px; box-shadow:0 12px 32px rgba(0,0,0,0.4); animation: popIn 0.2s ease-out;">
+      <div style="font-size:1.1rem; font-weight:bold; color:var(--primary); margin-bottom:12px; border-bottom:2px solid #e0f2fe; padding-bottom:8px; display:flex; align-items:center; gap:8px;">
+        <span>👤 Datos del Técnico y Contratista</span>
+      </div>
+      <p style="font-size:0.85rem; color:#475569; margin-bottom:14px; line-height:1.4;">
+        Por favor configura tu Contratista y tu Nombre de Técnico. Estos datos se guardarán en tu dispositivo y se adjuntarán automáticamente a todos los registros enviados.
+      </p>
+
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="color:#0055a5; font-weight:bold;">Contratista / Socio Comercial:</label>
+        <select id="setupContratista" style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem;">
+          <option value="">-- Seleccionar Contratista --</option>
+          <option value="Brussim">Brussim</option>
+          <option value="Enda">Enda</option>
+          <option value="Asociados Comerciales">Asociados Comerciales</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom:18px;">
+        <label style="color:#0055a5; font-weight:bold;">Técnico en Sitio (Nombre Completo):</label>
+        <input type="text" id="setupTecnico" placeholder="Escribe tu nombre completo..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem;">
+      </div>
+
+      <button type="button" class="btn btn-primary" onclick="saveUserConfig()" style="width:100%; padding:12px; font-weight:bold; font-size:1rem; border-radius:8px;">
+        💾 Guardar Datos y Continuar
+      </button>
     </div>
   </div>
 
