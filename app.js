@@ -925,18 +925,30 @@ function getTodayDateString() {
 
 function getTodayCompletedCount() {
   const todayStr = getTodayDateString();
-  let countFromEvidences = 0;
-  
+  const todaySet = new Set();
+
+  // 1. Contar registros guardados en dbEvidences que corresponden a la fecha de hoy
   if (Array.isArray(dbEvidences)) {
     dbEvidences.forEach(ev => {
       if (ev.fecha_captura && ev.fecha_captura.startsWith(todayStr)) {
-        countFromEvidences++;
+        const key = ev.unique_id || ev.asset_id || ev.id_registro_local;
+        if (key) todaySet.add(String(key));
       }
     });
   }
 
-  const storedTodayCount = parseInt(localStorage.getItem(`TELMEX_DAILY_COUNT_${todayStr}`) || "0", 10);
-  return Math.max(countFromEvidences, storedTodayCount);
+  // 2. Incluir registros guardados en el set del día de hoy en localStorage
+  const savedTodayJson = localStorage.getItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`);
+  if (savedTodayJson) {
+    try {
+      const arr = JSON.parse(savedTodayJson);
+      if (Array.isArray(arr)) {
+        arr.forEach(id => { if (id) todaySet.add(String(id)); });
+      }
+    } catch(e) {}
+  }
+
+  return todaySet.size;
 }
 
 function updateDailyGoalUI() {
@@ -972,16 +984,31 @@ function getCompletedAssetCount() {
 }
 
 function markAssetCompletedPermanently(assetId, uniqueId) {
+  // Guardar en set histórico global
   const set = getCompletedAssetIdsSet();
   if (assetId) set.add(String(assetId));
   if (uniqueId) set.add(String(uniqueId));
   localStorage.setItem("TELMEX_COMPLETED_ASSETS", JSON.stringify(Array.from(set)));
   completedAssetIdsSet = set;
 
-  // Actualizar meta diaria para la fecha de hoy
+  // Guardar en set específico de hoy (evitando duplicaciones de conteo)
   const todayStr = getTodayDateString();
-  const currentTodayCount = getTodayCompletedCount();
-  localStorage.setItem(`TELMEX_DAILY_COUNT_${todayStr}`, String(currentTodayCount + 1));
+  const todaySet = new Set();
+  const savedTodayJson = localStorage.getItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`);
+  if (savedTodayJson) {
+    try {
+      const arr = JSON.parse(savedTodayJson);
+      if (Array.isArray(arr)) {
+        arr.forEach(id => { if (id) todaySet.add(String(id)); });
+      }
+    } catch(e) {}
+  }
+
+  const keyToStore = uniqueId || assetId;
+  if (keyToStore) {
+    todaySet.add(String(keyToStore));
+  }
+  localStorage.setItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`, JSON.stringify(Array.from(todaySet)));
 
   updateDailyGoalUI();
 }
@@ -1256,10 +1283,13 @@ function clearEvidencesPrompt() {
   if (confirm("¿Estás seguro de borrar todas las evidencias guardadas en este teléfono?")) {
     dbEvidences = [];
     localStorage.removeItem("TELMEX_COMPLETED_ASSETS");
+    const todayStr = getTodayDateString();
+    localStorage.removeItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`);
     if (completedAssetIdsSet) completedAssetIdsSet.clear();
     saveEvidencesToStorage();
     renderSavedEvidences();
     applyHierarchyFilter();
+    updateDailyGoalUI();
   }
 }
 

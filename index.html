@@ -212,9 +212,8 @@
           <div class="form-group">
             <label>5. Evidencia Fotográfica (Foto DESPUÉS):</label>
             
-            <!-- Inputs Ocultos para Foto DESPUÉS -->
+            <!-- Input Oculto para Foto DESPUÉS -->
             <input type="file" id="inputCamDespues" accept="image/*" capture="camera" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
-            <input type="file" id="inputGalDespues" accept="image/*" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
 
             <div class="photo-upload-grid" style="grid-template-columns: 1fr;">
               <!-- Foto Después -->
@@ -226,11 +225,8 @@
                   <img id="previewDespues" style="display:none;">
                 </div>
                 <div class="photo-actions">
-                  <button type="button" class="btn-photo" onclick="openCameraModal('Despues')">
-                    📷 Cámara
-                  </button>
-                  <button type="button" class="btn-photo btn-photo-gallery" onclick="document.getElementById('inputGalDespues').click()">
-                    🖼️ Galería
+                  <button type="button" class="btn-photo" onclick="openCameraModal('Despues')" style="width:100%;">
+                    📷 Tomar Foto con Cámara
                   </button>
                 </div>
               </div>
