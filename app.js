@@ -9,6 +9,9 @@ let completedAssetIdsSet = new Set();
 let selectedModelFilter = "";
 let forceOfflineState = false;
 let lastKnownOnlineState = null;
+let pendingAsset = null;
+let modalSelectedType = "CASETA";
+let modalSelectedModel = "";
 
 // Catálogo Visual de Modelos para Casetas y Cajas
 const CASETA_MODELS = [
@@ -72,8 +75,8 @@ window.alert = function(msg) {
 };
 
 function initApp() {
-  renderTypeCatalogGrid();
   loadEvidencesFromStorage();
+  updateDailyGoalUI();
   
   checkNetworkConnectivity();
   
@@ -308,7 +311,7 @@ function switchView(viewName) {
       return;
     }
     if (!selectedModelFilter) {
-      alert("⚠️ Error: Debes seleccionar un modelo de Caseta o Caja en el muestrario visual (Paso 3) para ir a la pestaña de Evidencia.");
+      alert("⚠️ Error: Debes seleccionar y confirmar un modelo de Caseta o Caja en el modal antes de ir a Evidencia.");
       switchView('search');
       return;
     }
@@ -419,9 +422,9 @@ function locateTechnician() {
         }
       }
 
-      // Ordenar de la más cercana a la más lejana y tomar ÚNICAMENTE las 20 más cercanas
+      // Ordenar de la más cercana a la más lejana y tomar ÚNICAMENTE las 35 más cercanas
       results.sort((a, b) => a.dist_m - b.dist_m);
-      const topNearby = results.slice(0, 20);
+      const topNearby = results.slice(0, 35);
 
       renderSearchResults(topNearby, true, getCompletedAssetCount());
     },
@@ -461,43 +464,6 @@ function updateFormGpsDisplay() {
 
 function onElementTypeChange() {
   selectedModelFilter = "";
-  document.getElementById("selectedModelType").value = "";
-  renderTypeCatalogGrid();
-  applyHierarchyFilter();
-}
-
-function renderTypeCatalogGrid() {
-  const isCaseta = document.getElementById("elemento_caseta").checked;
-  const models = isCaseta ? CASETA_MODELS : CAJA_MODELS;
-  const grid = document.getElementById("typeCatalogGrid");
-  const lbl = document.getElementById("lblTipoElemento");
-  
-  if (lbl) lbl.innerText = isCaseta ? "Caseta" : "Caja";
-  if (!grid) return;
-
-  grid.innerHTML = "";
-  models.forEach(m => {
-    const card = document.createElement("div");
-    const isSel = (selectedModelFilter === m.id);
-    card.className = `type-card ${isSel ? 'selected' : ''}`;
-    card.onclick = () => selectModelType(m.id);
-    
-    card.innerHTML = `
-      <img src="${m.img}" class="type-card-img" alt="${m.title}" onerror="this.style.display='none'">
-      <div class="type-card-title">${m.title}</div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-function selectModelType(modelId) {
-  if (selectedModelFilter === modelId) {
-    selectedModelFilter = "";
-  } else {
-    selectedModelFilter = modelId;
-  }
-  document.getElementById("selectedModelType").value = selectedModelFilter;
-  renderTypeCatalogGrid();
   applyHierarchyFilter();
 }
 
@@ -512,7 +478,7 @@ function onSearchModeToggle() {
     populateEstadosFilter();
   } else {
     if (container) container.style.display = "none";
-    if (titleEl) titleEl.innerText = "📍 20 Opciones Más Cercanas a tu Ubicación";
+    if (titleEl) titleEl.innerText = "📍 35 Opciones Más Cercanas a tu Ubicación";
   }
 
   applyHierarchyFilter();
@@ -564,9 +530,10 @@ function onEstadoChange() {
 function applyHierarchyFilter() {
   const mode = document.querySelector('input[name="searchSelectionMode"]:checked')?.value || "AUTO";
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
-  const isCaseta = document.getElementById("elemento_caseta").checked;
-  const tipo = isCaseta ? "CASETA" : "CAJA";
-  const modelType = selectedModelFilter;
+  
+  const isTodos = document.getElementById("elemento_todos")?.checked;
+  const isCaseta = document.getElementById("elemento_caseta")?.checked;
+  const tipoFilter = isTodos ? "TODOS" : (isCaseta ? "CASETA" : "CAJA");
 
   // Set de IDs ya capturados para evitar duplicados
   const completedAssetIds = getCompletedAssetIdsSet();
@@ -587,7 +554,7 @@ function applyHierarchyFilter() {
 
   let filtered = catalog.filter(item => {
     if (completedAssetIds.has(String(item.id)) || (item.unique_id && completedAssetIds.has(String(item.unique_id)))) return false; // Excluir activos ya capturados
-    if (tipo && item.tipo !== tipo) return false;
+    if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) return false;
     if (mode === "MANUAL") {
       if (estadoVal && item.estado !== estadoVal) return false;
       if (areaVal && item.area_trabajo !== areaVal) return false;
@@ -608,9 +575,9 @@ function applyHierarchyFilter() {
     filtered.sort((a, b) => a.dist_m - b.dist_m);
   }
 
-  // Tomar las 20 más cercanas (o hasta 50 en búsqueda manual)
-  const maxResults = (mode === "MANUAL" && (estadoVal || areaVal)) ? 50 : 20;
-  renderSearchResults(filtered.slice(0, maxResults), Boolean(currentGpsCoords && currentGpsCoords.lat), getCompletedAssetCount());
+  // Tomar las 35 más cercanas (o hasta 50 en búsqueda manual)
+  const maxResults = (mode === "MANUAL" && (estadoVal || areaVal)) ? 50 : 35;
+  renderSearchResults(filtered.slice(0, maxResults), Boolean(currentGpsCoords && currentGpsCoords.lat), getTodayCompletedCount());
 }
 
 function onQueryInput() {
@@ -641,7 +608,7 @@ function onQueryInput() {
     matches.sort((a, b) => a.dist_m - b.dist_m);
   }
 
-  renderSearchResults(matches.slice(0, 20), Boolean(currentGpsCoords && currentGpsCoords.lat), getCompletedAssetCount());
+  renderSearchResults(matches.slice(0, 35), Boolean(currentGpsCoords && currentGpsCoords.lat), getTodayCompletedCount());
 }
 
 // ---------------------------------------------------------
@@ -651,8 +618,8 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
   const listDiv = document.getElementById("searchResultsList");
   const countSpan = document.getElementById("resultCount");
   
-  const completedBadge = completedCount > 0 ? ` (${completedCount} capturados)` : '';
-  countSpan.innerText = `${items.length} más cercanos${completedBadge}`;
+  const completedBadge = completedCount > 0 ? ` (${completedCount} capturados hoy)` : '';
+  countSpan.innerText = `${items.length} opciones más cercanas${completedBadge}`;
   listDiv.innerHTML = "";
 
   if (items.length === 0) {
@@ -675,7 +642,7 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
     }
 
     const badgeColor = item.tipo === 'CASETA' ? '#0055a5' : '#00a8cc';
-    const displayModel = selectedModelFilter || item.modelo_tipo || 'NORMAL';
+    const displayModel = item.modelo_tipo || (item.tipo === 'CASETA' ? 'NORMAL' : 'Sencilla');
 
     card.innerHTML = `
       <div class="asset-header" style="align-items:center;">
@@ -699,33 +666,117 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
 }
 
 function selectAsset(item) {
-  if (!selectedModelFilter) {
-    alert("⚠️ Error: Debes seleccionar primero un modelo de Caseta o Caja en el muestrario visual (Paso 3) para continuar al registro.");
+  pendingAsset = item;
+  modalSelectedType = (item.tipo === "CAJA") ? "CAJA" : "CASETA";
+  
+  const isCaja = (modalSelectedType === "CAJA");
+  const radioCaja = document.getElementById("modal_tipo_caja");
+  const radioCaseta = document.getElementById("modal_tipo_caseta");
+  if (isCaja && radioCaja) radioCaja.checked = true;
+  if (!isCaja && radioCaseta) radioCaseta.checked = true;
+
+  const models = isCaja ? CAJA_MODELS : CASETA_MODELS;
+  if (item.modelo_tipo && models.some(m => m.id === item.modelo_tipo)) {
+    modalSelectedModel = item.modelo_tipo;
+  } else {
+    modalSelectedModel = models[0].id;
+  }
+
+  const idEl = document.getElementById("modalAssetId");
+  const infoEl = document.getElementById("modalAssetInfo");
+  if (idEl) idEl.innerText = `Activo: ${item.id} (${modalSelectedType})`;
+  if (infoEl) infoEl.innerText = `📍 Estado: ${item.estado || 'N/A'} | Área: ${item.area_trabajo || item.municipio || 'N/A'} | Calle: ${item.calle || 'S/N'}`;
+
+  renderModalTypeGrid();
+
+  const modal = document.getElementById("assetConfirmModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeAssetConfirmModal() {
+  const modal = document.getElementById("assetConfirmModal");
+  if (modal) modal.style.display = "none";
+}
+
+function onModalTypeChange() {
+  const isCaja = document.getElementById("modal_tipo_caja")?.checked;
+  modalSelectedType = isCaja ? "CAJA" : "CASETA";
+
+  const models = isCaja ? CAJA_MODELS : CASETA_MODELS;
+  if (!models.some(m => m.id === modalSelectedModel)) {
+    modalSelectedModel = models[0].id;
+  }
+
+  if (pendingAsset) {
+    const idEl = document.getElementById("modalAssetId");
+    if (idEl) idEl.innerText = `Activo: ${pendingAsset.id} (${modalSelectedType})`;
+  }
+
+  renderModalTypeGrid();
+}
+
+function renderModalTypeGrid() {
+  const isCaja = (modalSelectedType === "CAJA");
+  const models = isCaja ? CAJA_MODELS : CASETA_MODELS;
+  const grid = document.getElementById("modalTypeGrid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  models.forEach(m => {
+    const card = document.createElement("div");
+    const isSel = (modalSelectedModel === m.id);
+    card.className = `type-card ${isSel ? 'selected' : ''}`;
+    card.onclick = () => selectModalModelType(m.id);
+
+    card.innerHTML = `
+      <img src="${m.img}" class="type-card-img" alt="${m.title}" onerror="this.style.display='none'">
+      <div class="type-card-title">${m.title}</div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function selectModalModelType(modelId) {
+  modalSelectedModel = modelId;
+  renderModalTypeGrid();
+}
+
+function confirmAssetSelection() {
+  if (!pendingAsset) {
+    alert("⚠️ Error: No hay ningún activo seleccionado.");
+    closeAssetConfirmModal();
     return;
   }
-  selectedAsset = item;
-  selectedAsset.modelo_tipo = selectedModelFilter;
-  const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
-  
-  const uniqueId = generateUniqueId(item.tipo, item.area_trabajo);
-  selectedAsset.unique_id = uniqueId;
-
-  // Actualizar alerta general
-  document.getElementById("activeAssetAlert").style.display = "block";
-  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${item.id}) [${proceso}] (${item.tipo} - ${selectedModelFilter}) - ${item.area_trabajo}, ${item.estado}`;
-
-  // Llenar campos del formulario automáticamente
-  document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${item.id})`;
-  document.getElementById("formAssetEstado").value = item.estado || "DESCONOCIDO";
-  document.getElementById("formAssetArea").value = item.area_trabajo || item.municipio || "GENERAL";
-  document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Modelo: ${selectedModelFilter}`;
-  document.getElementById("formAssetInfo").value = `Colonia/Distrito: ${item.colonia || item.municipio || 'N/A'} | Calle: ${item.calle || 'S/N'}`;
-
-  if (item.oferta_sugerida) {
-    document.getElementById("ofertaColocada").value = item.oferta_sugerida;
+  if (!modalSelectedModel) {
+    alert("⚠️ Por favor selecciona un modelo en el muestrario visual.");
+    return;
   }
 
-  // Cambiar a vista formulario
+  selectedAsset = { ...pendingAsset };
+  selectedAsset.tipo = modalSelectedType;
+  selectedAsset.modelo_tipo = modalSelectedModel;
+  selectedModelFilter = modalSelectedModel;
+
+  const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
+  const uniqueId = generateUniqueId(selectedAsset.tipo, selectedAsset.area_trabajo);
+  selectedAsset.unique_id = uniqueId;
+
+  // Actualizar alerta general de activo seleccionado
+  document.getElementById("activeAssetAlert").style.display = "block";
+  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${modalSelectedModel}) - ${selectedAsset.area_trabajo}, ${selectedAsset.estado}`;
+
+  // Llenar campos del formulario automáticamente
+  document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${selectedAsset.id})`;
+  document.getElementById("formAssetEstado").value = selectedAsset.estado || "DESCONOCIDO";
+  document.getElementById("formAssetArea").value = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
+  document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${modalSelectedModel}`;
+  document.getElementById("formAssetInfo").value = `Colonia/Distrito: ${selectedAsset.colonia || selectedAsset.municipio || 'N/A'} | Calle: ${selectedAsset.calle || 'S/N'}`;
+
+  if (selectedAsset.oferta_sugerida) {
+    document.getElementById("ofertaColocada").value = selectedAsset.oferta_sugerida;
+  }
+
+  closeAssetConfirmModal();
   switchView('form');
 }
 
@@ -886,6 +937,51 @@ function getCompletedAssetIdsSet() {
   return set;
 }
 
+function getTodayDateString() {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayCompletedCount() {
+  const todayStr = getTodayDateString();
+  let countFromEvidences = 0;
+  
+  if (Array.isArray(dbEvidences)) {
+    dbEvidences.forEach(ev => {
+      if (ev.fecha_captura && ev.fecha_captura.startsWith(todayStr)) {
+        countFromEvidences++;
+      }
+    });
+  }
+
+  const storedTodayCount = parseInt(localStorage.getItem(`TELMEX_DAILY_COUNT_${todayStr}`) || "0", 10);
+  return Math.max(countFromEvidences, storedTodayCount);
+}
+
+function updateDailyGoalUI() {
+  const count = getTodayCompletedCount();
+  const goal = 35;
+  const pct = Math.min(100, Math.round((count / goal) * 100));
+
+  const badge = document.getElementById("dailyGoalBadge");
+  const bar = document.getElementById("dailyGoalProgressBar");
+  const text = document.getElementById("dailyGoalText");
+
+  if (badge) badge.innerText = `${count} / ${goal}`;
+  if (bar) bar.style.width = `${pct}%`;
+  if (text) {
+    if (count >= goal) {
+      text.innerText = `${pct}% completado hoy (¡Meta alcanzada de ${goal}! 🎉)`;
+    } else {
+      const remaining = goal - count;
+      text.innerText = `${pct}% completado hoy (Faltan ${remaining} de la meta)`;
+    }
+  }
+}
+
 function getCompletedAssetCount() {
   const set = getCompletedAssetIdsSet();
   let primaryCount = 0;
@@ -903,6 +999,13 @@ function markAssetCompletedPermanently(assetId, uniqueId) {
   if (uniqueId) set.add(String(uniqueId));
   localStorage.setItem("TELMEX_COMPLETED_ASSETS", JSON.stringify(Array.from(set)));
   completedAssetIdsSet = set;
+
+  // Actualizar meta diaria para la fecha de hoy
+  const todayStr = getTodayDateString();
+  const currentTodayCount = getTodayCompletedCount();
+  localStorage.setItem(`TELMEX_DAILY_COUNT_${todayStr}`, String(currentTodayCount + 1));
+
+  updateDailyGoalUI();
 }
 
 function loadEvidencesFromStorage() {
