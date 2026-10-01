@@ -84,24 +84,7 @@
           </div>
         </div>
 
-        <!-- Paso 2: Tipo de Elemento (Todas / Caseta / Caja) -->
-        <div class="form-group">
-          <label>Paso 2: Tipo de Elemento a Mostrar:</label>
-          <div class="radio-group">
-            <div class="radio-pill">
-              <input type="radio" id="elemento_todos" name="filterTipo" value="TODOS" checked onchange="onElementTypeChange()">
-              <label for="elemento_todos">🌐 Todas (35 cercanas)</label>
-            </div>
-            <div class="radio-pill">
-              <input type="radio" id="elemento_caseta" name="filterTipo" value="CASETA" onchange="onElementTypeChange()">
-              <label for="elemento_caseta">📞 Caseta</label>
-            </div>
-            <div class="radio-pill">
-              <input type="radio" id="elemento_caja" name="filterTipo" value="CAJA" onchange="onElementTypeChange()">
-              <label for="elemento_caja">📦 Caja</label>
-            </div>
-          </div>
-        </div>
+
 
         <!-- Contenedor de Filtros Manuales (Estado y Área de Trabajo) -->
         <div id="manualFilterContainer" style="display: none; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px;">
@@ -356,24 +339,9 @@
         <div id="modalAssetInfo" style="font-size:0.8rem; color:#475569; margin-top:4px;">Ubicación</div>
       </div>
 
-      <!-- Paso 1: Reforzar / Confirmar Tipo (Caseta vs Caja) -->
-      <div class="form-group" style="margin-bottom:12px;">
-        <label style="color:#0055a5; font-weight:bold;">1. Reforzar / Confirmar Tipo de Elemento:</label>
-        <div class="radio-group">
-          <div class="radio-pill">
-            <input type="radio" id="modal_tipo_caseta" name="modalTipoElemento" value="CASETA" onchange="onModalTypeChange()">
-            <label for="modal_tipo_caseta">📞 Caseta</label>
-          </div>
-          <div class="radio-pill">
-            <input type="radio" id="modal_tipo_caja" name="modalTipoElemento" value="CAJA" onchange="onModalTypeChange()">
-            <label for="modal_tipo_caja">📦 Caja</label>
-          </div>
-        </div>
-      </div>
-
-      <!-- Paso 2: Seleccionar Modelo en Muestrario Visual -->
+      <!-- Seleccionar Modelo en Muestrario Visual -->
       <div class="form-group" style="margin-bottom:16px;">
-        <label style="color:#0055a5; font-weight:bold;">2. Seleccionar Modelo (Muestrario Visual):</label>
+        <label style="color:#0055a5; font-weight:bold;">1. Seleccionar y Confirmar Modelo (Muestrario Visual):</label>
         <div id="modalTypeGrid" class="type-catalog-grid" style="max-height:220px;">
           <!-- Renderizado dinámicamente -->
         </div>

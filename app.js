@@ -669,13 +669,7 @@ function selectAsset(item) {
   pendingAsset = item;
   modalSelectedType = (item.tipo === "CAJA") ? "CAJA" : "CASETA";
   
-  const isCaja = (modalSelectedType === "CAJA");
-  const radioCaja = document.getElementById("modal_tipo_caja");
-  const radioCaseta = document.getElementById("modal_tipo_caseta");
-  if (isCaja && radioCaja) radioCaja.checked = true;
-  if (!isCaja && radioCaseta) radioCaseta.checked = true;
-
-  const models = isCaja ? CAJA_MODELS : CASETA_MODELS;
+  const models = (modalSelectedType === "CAJA") ? CAJA_MODELS : CASETA_MODELS;
   if (item.modelo_tipo && models.some(m => m.id === item.modelo_tipo)) {
     modalSelectedModel = item.modelo_tipo;
   } else {
@@ -684,7 +678,8 @@ function selectAsset(item) {
 
   const idEl = document.getElementById("modalAssetId");
   const infoEl = document.getElementById("modalAssetInfo");
-  if (idEl) idEl.innerText = `Activo: ${item.id} (${modalSelectedType})`;
+  const typeBadge = (modalSelectedType === "CAJA") ? "📦 CAJA" : "📞 CASETA";
+  if (idEl) idEl.innerText = `Activo: ${item.id} [${typeBadge}]`;
   if (infoEl) infoEl.innerText = `📍 Estado: ${item.estado || 'N/A'} | Área: ${item.area_trabajo || item.municipio || 'N/A'} | Calle: ${item.calle || 'S/N'}`;
 
   renderModalTypeGrid();
@@ -696,23 +691,6 @@ function selectAsset(item) {
 function closeAssetConfirmModal() {
   const modal = document.getElementById("assetConfirmModal");
   if (modal) modal.style.display = "none";
-}
-
-function onModalTypeChange() {
-  const isCaja = document.getElementById("modal_tipo_caja")?.checked;
-  modalSelectedType = isCaja ? "CAJA" : "CASETA";
-
-  const models = isCaja ? CAJA_MODELS : CASETA_MODELS;
-  if (!models.some(m => m.id === modalSelectedModel)) {
-    modalSelectedModel = models[0].id;
-  }
-
-  if (pendingAsset) {
-    const idEl = document.getElementById("modalAssetId");
-    if (idEl) idEl.innerText = `Activo: ${pendingAsset.id} (${modalSelectedType})`;
-  }
-
-  renderModalTypeGrid();
 }
 
 function renderModalTypeGrid() {
