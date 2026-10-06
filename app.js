@@ -427,7 +427,7 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 // ---------------------------------------------------------
-// GENERADOR DE ID ÚNICA (CAS_AGU_0001 / CAJ_AGU_0001)
+// GENERADOR DE ID ÚNICA CONSECUTIVO CONTINUO HISTÓRICO (CAS_AGU_0001 / CAJ_AGU_0001)
 // ---------------------------------------------------------
 function generateUniqueId(tipo, areaTrabajo) {
   const prefix = (tipo === "CAJA") ? "CAJ" : "CAS";
@@ -443,18 +443,48 @@ function generateUniqueId(tipo, areaTrabajo) {
   }
 
   const matchPattern = `${prefix}_${cleanArea}_`;
-  let maxSeq = 0;
+  const storageSeqKey = `TELMEX_LAST_FOLIO_SEQ_${matchPattern}`;
 
-  dbEvidences.forEach(ev => {
-    const uid = ev.unique_id || "";
-    if (uid.startsWith(matchPattern)) {
-      const parts = uid.split("_");
-      const num = parseInt(parts[parts.length - 1], 10);
-      if (!isNaN(num) && num > maxSeq) {
-        maxSeq = num;
+  // 1. Obtener consecutivo histórico permanente de localStorage
+  let maxSeq = 0;
+  const savedSeq = parseInt(localStorage.getItem(storageSeqKey) || "0", 10);
+  if (!isNaN(savedSeq) && savedSeq > maxSeq) {
+    maxSeq = savedSeq;
+  }
+
+  // 2. Revisar historial de todos los activos completados (TELMEX_COMPLETED_ASSETS)
+  try {
+    const permSaved = localStorage.getItem("TELMEX_COMPLETED_ASSETS");
+    if (permSaved) {
+      const arr = JSON.parse(permSaved);
+      if (Array.isArray(arr)) {
+        arr.forEach(item => {
+          const str = String(item || "").trim().toUpperCase();
+          if (str.startsWith(matchPattern)) {
+            const parts = str.split("_");
+            const num = parseInt(parts[parts.length - 1], 10);
+            if (!isNaN(num) && num > maxSeq) {
+              maxSeq = num;
+            }
+          }
+        });
       }
     }
-  });
+  } catch(e) {}
+
+  // 3. Revisar evidencias pendientes actuales en memoria
+  if (Array.isArray(dbEvidences)) {
+    dbEvidences.forEach(ev => {
+      const uid = String(ev.unique_id || "").trim().toUpperCase();
+      if (uid.startsWith(matchPattern)) {
+        const parts = uid.split("_");
+        const num = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(num) && num > maxSeq) {
+          maxSeq = num;
+        }
+      }
+    });
+  }
 
   const nextSeq = String(maxSeq + 1).padStart(4, "0");
   return `${prefix}_${cleanArea}_${nextSeq}`;
@@ -487,7 +517,9 @@ function locateTechnician() {
       const results = [];
       for (let i = 0; i < catalog.length; i++) {
         const item = catalog[i];
-        if (completedAssetIds.has(String(item.id)) || (item.unique_id && completedAssetIds.has(String(item.unique_id)))) continue;
+        const itemId = String(item.id || "").trim().toUpperCase();
+        const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
+        if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) continue;
         if (item.lat && item.lon) {
           const dist = haversineDistance(lat, lon, item.lat, item.lon);
           results.push({ ...item, dist_m: dist });
@@ -498,7 +530,7 @@ function locateTechnician() {
       results.sort((a, b) => a.dist_m - b.dist_m);
       const topNearby = results.slice(0, 35);
 
-      renderSearchResults(topNearby, true, getCompletedAssetCount());
+      renderSearchResults(topNearby, true, getTodayCompletedCount());
     },
     (err) => {
       statusDiv.innerText = `Error al obtener GPS: ${err.message}. Verifica que la ubicación esté encendida.`;
@@ -625,7 +657,9 @@ function applyHierarchyFilter() {
   }
 
   let filtered = catalog.filter(item => {
-    if (completedAssetIds.has(String(item.id)) || (item.unique_id && completedAssetIds.has(String(item.unique_id)))) return false; // Excluir activos ya capturados
+    const itemId = String(item.id || "").trim().toUpperCase();
+    const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
+    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false; // Excluir activos ya capturados permanentemente
     if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) return false;
     if (mode === "MANUAL") {
       if (estadoVal && item.estado !== estadoVal) return false;
@@ -662,7 +696,9 @@ function onQueryInput() {
   const completedAssetIds = getCompletedAssetIdsSet();
 
   let matches = catalog.filter(item => {
-    if (completedAssetIds.has(String(item.id)) || (item.unique_id && completedAssetIds.has(String(item.unique_id)))) return false; // Excluir activos ya capturados
+    const itemId = String(item.id || "").trim().toUpperCase();
+    const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
+    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false; // Excluir completados permanentemente
     return (item.id && item.id.toUpperCase().includes(q)) || 
            (item.calle && item.calle.toUpperCase().includes(q)) ||
            (item.municipio && item.municipio.toUpperCase().includes(q)) ||
@@ -808,12 +844,13 @@ function confirmAssetSelection() {
   selectedModelFilter = modalSelectedModel;
 
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
-  const uniqueId = generateUniqueId(selectedAsset.tipo, selectedAsset.area_trabajo);
+  const areaVal = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
+  const uniqueId = generateUniqueId(selectedAsset.tipo, areaVal);
   selectedAsset.unique_id = uniqueId;
 
   // Actualizar alerta general de activo seleccionado
   document.getElementById("activeAssetAlert").style.display = "block";
-  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${modalSelectedModel}) - ${selectedAsset.area_trabajo}, ${selectedAsset.estado}`;
+  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${modalSelectedModel}) - ${areaVal}, ${selectedAsset.estado}`;
 
   // Llenar campos del formulario automáticamente
   document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${selectedAsset.id})`;
@@ -911,7 +948,8 @@ function saveEvidence(event) {
   const comentarios = document.getElementById("comentarios").value;
 
   const timestamp = new Date().toISOString();
-  const uniqueId = selectedAsset.unique_id || generateUniqueId(selectedAsset.tipo, selectedAsset.area_trabajo);
+  const areaVal = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
+  const uniqueId = selectedAsset.unique_id || generateUniqueId(selectedAsset.tipo, areaVal);
 
   const evidenceRecord = {
     id_registro_local: "EV_" + Date.now(),
@@ -981,26 +1019,32 @@ function getCompletedAssetIdsSet() {
     try {
       const arr = JSON.parse(permSaved);
       if (Array.isArray(arr)) {
-        arr.forEach(id => { if (id) set.add(String(id)); });
+        arr.forEach(id => {
+          if (id) set.add(String(id).trim().toUpperCase());
+        });
       }
     } catch(e) {}
   }
   if (Array.isArray(dbEvidences)) {
     dbEvidences.forEach(ev => {
-      if (ev.asset_id) set.add(String(ev.asset_id));
-      if (ev.unique_id) set.add(String(ev.unique_id));
+      if (ev.asset_id) set.add(String(ev.asset_id).trim().toUpperCase());
+      if (ev.unique_id) set.add(String(ev.unique_id).trim().toUpperCase());
     });
   }
   completedAssetIdsSet = set;
   return set;
 }
 
-function getTodayDateString() {
-  const d = new Date();
+function getLocalDateString(dateObj = new Date()) {
+  const d = dateObj;
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+function getTodayDateString() {
+  return getLocalDateString(new Date());
 }
 
 function getTodayCompletedCount() {
@@ -1010,9 +1054,22 @@ function getTodayCompletedCount() {
   // 1. Contar registros guardados en dbEvidences que corresponden a la fecha de hoy
   if (Array.isArray(dbEvidences)) {
     dbEvidences.forEach(ev => {
-      if (ev.fecha_captura && ev.fecha_captura.startsWith(todayStr)) {
+      let isToday = false;
+      if (ev.fecha_captura) {
+        if (ev.fecha_captura.startsWith(todayStr)) {
+          isToday = true;
+        } else {
+          try {
+            const evDate = new Date(ev.fecha_captura);
+            if (!isNaN(evDate.getTime()) && getLocalDateString(evDate) === todayStr) {
+              isToday = true;
+            }
+          } catch(e) {}
+        }
+      }
+      if (isToday) {
         const key = ev.unique_id || ev.asset_id || ev.id_registro_local;
-        if (key) todaySet.add(String(key));
+        if (key) todaySet.add(String(key).trim().toUpperCase());
       }
     });
   }
@@ -1023,7 +1080,7 @@ function getTodayCompletedCount() {
     try {
       const arr = JSON.parse(savedTodayJson);
       if (Array.isArray(arr)) {
-        arr.forEach(id => { if (id) todaySet.add(String(id)); });
+        arr.forEach(id => { if (id) todaySet.add(String(id).trim().toUpperCase()); });
       }
     } catch(e) {}
   }
@@ -1064,14 +1121,36 @@ function getCompletedAssetCount() {
 }
 
 function markAssetCompletedPermanently(assetId, uniqueId) {
-  // Guardar en set histórico global
+  // Guardar en set histórico global permanente
   const set = getCompletedAssetIdsSet();
-  if (assetId) set.add(String(assetId));
-  if (uniqueId) set.add(String(uniqueId));
+  if (assetId) {
+    const cleanAssetId = String(assetId).trim().toUpperCase();
+    if (cleanAssetId) set.add(cleanAssetId);
+  }
+  if (uniqueId) {
+    const cleanUniqueId = String(uniqueId).trim().toUpperCase();
+    if (cleanUniqueId) {
+      set.add(cleanUniqueId);
+
+      // Registrar consecutivo permanente en localStorage para que nunca se reinicie a 0001
+      const parts = cleanUniqueId.split("_");
+      if (parts.length >= 3) {
+        const prefixArea = `${parts[0]}_${parts[1]}_`;
+        const num = parseInt(parts[parts.length - 1], 10);
+        if (!isNaN(num)) {
+          const key = `TELMEX_LAST_FOLIO_SEQ_${prefixArea}`;
+          const currentMax = parseInt(localStorage.getItem(key) || "0", 10);
+          if (num > currentMax) {
+            localStorage.setItem(key, String(num));
+          }
+        }
+      }
+    }
+  }
   localStorage.setItem("TELMEX_COMPLETED_ASSETS", JSON.stringify(Array.from(set)));
   completedAssetIdsSet = set;
 
-  // Guardar en set específico de hoy (evitando duplicaciones de conteo)
+  // Guardar en set específico de hoy (evitando duplicaciones de conteo para la meta de 35)
   const todayStr = getTodayDateString();
   const todaySet = new Set();
   const savedTodayJson = localStorage.getItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`);
@@ -1079,14 +1158,14 @@ function markAssetCompletedPermanently(assetId, uniqueId) {
     try {
       const arr = JSON.parse(savedTodayJson);
       if (Array.isArray(arr)) {
-        arr.forEach(id => { if (id) todaySet.add(String(id)); });
+        arr.forEach(id => { if (id) todaySet.add(String(id).trim().toUpperCase()); });
       }
     } catch(e) {}
   }
 
   const keyToStore = uniqueId || assetId;
   if (keyToStore) {
-    todaySet.add(String(keyToStore));
+    todaySet.add(String(keyToStore).trim().toUpperCase());
   }
   localStorage.setItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`, JSON.stringify(Array.from(todaySet)));
 
@@ -1273,7 +1352,9 @@ async function syncAllToLinkaform() {
       if (response.ok) {
         let resData = {};
         try { resData = JSON.parse(resText); } catch(e) {}
-        const folio = resData.folio || resData.id || resData.answers_id || "OK";
+        const folio = resData.folio || resData.id || resData.answers_id || 
+                      (resData.response && (resData.response.folio || resData.response.id)) || 
+                      (resData.data && (resData.data.folio || resData.data.id)) || "OK";
         sentFolios.push(folio);
         markAssetCompletedPermanently(ev.asset_id, ev.unique_id);
         successCount++;
@@ -1294,6 +1375,7 @@ async function syncAllToLinkaform() {
   dbEvidences = remainingEvidences;
   saveEvidencesToStorage();
   renderSavedEvidences();
+  applyHierarchyFilter();
 
   if (btn) btn.innerText = "🚀 Enviar Todo a Linkaform";
 
@@ -1366,12 +1448,8 @@ function exportEvidencesJSON() {
 }
 
 function clearEvidencesPrompt() {
-  if (confirm("¿Estás seguro de borrar todas las evidencias guardadas en este teléfono?")) {
+  if (confirm("¿Estás seguro de borrar las evidencias pendientes del lote en este teléfono? (Los activos completados seguirán excluidos para evitar duplicados)")) {
     dbEvidences = [];
-    localStorage.removeItem("TELMEX_COMPLETED_ASSETS");
-    const todayStr = getTodayDateString();
-    localStorage.removeItem(`TELMEX_TODAY_COMPLETED_SET_${todayStr}`);
-    if (completedAssetIdsSet) completedAssetIdsSet.clear();
     saveEvidencesToStorage();
     renderSavedEvidences();
     applyHierarchyFilter();
