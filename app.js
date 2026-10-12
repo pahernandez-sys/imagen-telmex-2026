@@ -76,9 +76,146 @@ window.alert = function(msg) {
   showCustomAlert(msg);
 };
 
+// Catálogo Oficial de Contratistas y Técnicos (Fuente: Contratistas.xlsx)
+const CONTRATISTAS_TECNICOS = {
+  "Adrian Valenzuela": [
+    "Leonel Romero Sanchez",
+    "Jose Antonio Esquivel",
+    "Jesus Antonio Esquivel"
+  ],
+  "Alejandro Adrian Obeso": [
+    "Eduardo Alonzo Rodriguez Miranda",
+    "Pedro Damian Peña Bojorquez",
+    "Leopoldo Elyud Lopez Rocha",
+    "Jose Juan Pico Burgueño",
+    "Juan Gabriel Hernandez Hernandez",
+    "Ruth Elizabeth Gonzalez Ibarra"
+  ],
+  "Arturo Zavala Fuentes": [
+    "Arturo Zavala Fuentes",
+    "Raul Ruenes Malagon"
+  ],
+  "Ernesto Aparicio Hernandez": [
+    "Lucino Garduño Quiroz",
+    "Salmon Vega Guerrero"
+  ],
+  "Jose antonio Esquivel": [
+    "Jose antonio Esquivel"
+  ],
+  "Jose Miguel Prats Coutiño": [
+    "Jorge Lopez",
+    "Daniel Aguilar Vazquez",
+    "Ramon Aguilar",
+    "Emilio Cruz"
+  ],
+  "Lucino Garduño Quiroz": [
+    "Ernesto Aparicio Hernandez",
+    "Carlos de Dios Hidalgo"
+  ],
+  "Luis Jose Vasquez Briceño": [
+    "Ramon Nuñez Victoria",
+    "Criastian de Jesus Vargas Amaro"
+  ],
+  "Noe Gastelum Lopez": [
+    "Noe Gastelum Lopez"
+  ],
+  "Ricardo Avila Sanchez": [
+    "Ricardo Avila Sanchez",
+    "Alejandro Navarrte"
+  ],
+  "Roberto Melchor Frutos Fuentes": [
+    "Alfredo Lopez Garnica",
+    "Rogelio Yañes Lozano",
+    "Marco Antonio Catañeda Garcia",
+    "Gabriel Sanchez Barrera",
+    "Napoleon Mercado Bautista",
+    "Martin Alfonzo Chavez Torres"
+  ],
+  "Roberto Merino Merino": [
+    "Roberto Merino Merino",
+    "Diego Lizandro Keno Luna"
+  ],
+  "Sergio Beccerra Franco": [
+    "Jose Antonio Esquive"
+  ],
+  "TRANSFI COMMERCE & MARKET": [
+    "Juan Daniel Gonzales",
+    "Johnny Josué Álvarez Alvarado",
+    "Juan Raul Hernandez Osuna",
+    "Juda Velazquez Jara",
+    "Natanael Velazquez Jada"
+  ],
+  "Victor Hugo Lopez Garcia": [
+    "Pablo Emmanuel Reyes Hernandez",
+    "Jair Emmanuel Martienez Morales",
+    "Samuel Romero Sanchez",
+    "Jose Gonzalez Gonzalez",
+    "Victor Hugo Lopez Garcia",
+    "Cruz Antonio Hernandez Ruiz",
+    "Lucio Leonardo Catillo Coronel"
+  ]
+};
+
+function populateContratistasDropdown(selectedContratista = "") {
+  const select = document.getElementById("setupContratista");
+  if (!select) return;
+
+  const currentVal = selectedContratista || userContratista;
+  select.innerHTML = '<option value="">-- Seleccionar Contratista --</option>';
+
+  const sortedContratistas = Object.keys(CONTRATISTAS_TECNICOS).sort((a, b) => a.localeCompare(b, 'es'));
+  sortedContratistas.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
+    if (c === currentVal) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
+function onSetupContratistaChange() {
+  const contratistaSelect = document.getElementById("setupContratista");
+  const selectedContratista = contratistaSelect?.value || "";
+  updateTecnicosDropdown(selectedContratista);
+}
+
+function updateTecnicosDropdown(contratista, preselectedTecnico = "") {
+  const select = document.getElementById("setupTecnico");
+  if (!select) return;
+
+  select.innerHTML = "";
+
+  if (!contratista || !CONTRATISTAS_TECNICOS[contratista]) {
+    select.innerHTML = '<option value="">-- Selecciona primero un Contratista --</option>';
+    select.disabled = true;
+    return;
+  }
+
+  select.disabled = false;
+  const tecnicos = CONTRATISTAS_TECNICOS[contratista];
+  select.innerHTML = '<option value="">-- Seleccionar Técnico --</option>';
+
+  const targetTecnico = preselectedTecnico || userTecnico;
+  tecnicos.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t;
+    opt.textContent = t;
+    if (t === targetTecnico) opt.selected = true;
+    select.appendChild(opt);
+  });
+}
+
 function checkUserConfig() {
   userContratista = localStorage.getItem("TELMEX_CONTRATISTA") || "";
   userTecnico = localStorage.getItem("TELMEX_TECNICO") || "";
+
+  // Validar si el contratista y técnico guardados pertenecen a la lista oficial
+  if (userContratista && (!CONTRATISTAS_TECNICOS[userContratista] || (userTecnico && !CONTRATISTAS_TECNICOS[userContratista].includes(userTecnico)))) {
+    userContratista = "";
+    userTecnico = "";
+    localStorage.removeItem("TELMEX_CONTRATISTA");
+    localStorage.removeItem("TELMEX_TECNICO");
+  }
 
   updateHeaderUserInfo();
   updateFormUserDisplay();
@@ -89,10 +226,8 @@ function checkUserConfig() {
 }
 
 function openUserSetupModal() {
-  const contratistaSelect = document.getElementById("setupContratista");
-  const tecnicoInput = document.getElementById("setupTecnico");
-  if (contratistaSelect) contratistaSelect.value = userContratista;
-  if (tecnicoInput) tecnicoInput.value = userTecnico;
+  populateContratistasDropdown(userContratista);
+  updateTecnicosDropdown(userContratista, userTecnico);
   const modal = document.getElementById("userSetupModal");
   if (modal) modal.style.display = "flex";
 }
@@ -111,7 +246,7 @@ function saveUserConfig() {
     return;
   }
   if (!tecnico) {
-    alert("⚠️ Por favor escribe tu Nombre de Técnico en Sitio.");
+    alert("⚠️ Por favor selecciona tu Nombre de Técnico en Sitio.");
     return;
   }
 

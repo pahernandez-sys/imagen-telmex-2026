@@ -1,4 +1,4 @@
-const CACHE_NAME = "telmex-pwa-cache-v31";
+const CACHE_NAME = "telmex-pwa-cache-v33";
 const ASSETS_TO_CACHE = [
   "./",
   "./index.html",
