@@ -171,31 +171,85 @@ function populateContratistasDropdown(selectedContratista = "") {
     if (c === currentVal) opt.selected = true;
     select.appendChild(opt);
   });
+
+  // Opción "Otro" al final de la lista de contratistas
+  const optOtro = document.createElement("option");
+  optOtro.value = "OTRO";
+  optOtro.textContent = "Otro (Ingresar manualmente)...";
+  if (currentVal && !CONTRATISTAS_TECNICOS[currentVal]) {
+    optOtro.selected = true;
+  }
+  select.appendChild(optOtro);
 }
 
 function onSetupContratistaChange() {
   const contratistaSelect = document.getElementById("setupContratista");
+  const manualContratistaInput = document.getElementById("setupContratistaManual");
+  const tecnicoSelect = document.getElementById("setupTecnico");
+  const manualTecnicoInput = document.getElementById("setupTecnicoManual");
+
   const selectedContratista = contratistaSelect?.value || "";
-  updateTecnicosDropdown(selectedContratista);
+
+  if (selectedContratista === "OTRO") {
+    if (manualContratistaInput) {
+      manualContratistaInput.style.display = "block";
+      manualContratistaInput.value = "";
+      manualContratistaInput.focus();
+    }
+    if (tecnicoSelect) {
+      tecnicoSelect.style.display = "none";
+    }
+    if (manualTecnicoInput) {
+      manualTecnicoInput.style.display = "block";
+      manualTecnicoInput.value = "";
+    }
+  } else {
+    if (manualContratistaInput) {
+      manualContratistaInput.style.display = "none";
+    }
+    if (tecnicoSelect) {
+      tecnicoSelect.style.display = "block";
+    }
+    if (manualTecnicoInput) {
+      manualTecnicoInput.style.display = "none";
+    }
+    updateTecnicosDropdown(selectedContratista);
+  }
 }
 
 function updateTecnicosDropdown(contratista, preselectedTecnico = "") {
   const select = document.getElementById("setupTecnico");
+  const manualTecnicoInput = document.getElementById("setupTecnicoManual");
   if (!select) return;
 
   select.innerHTML = "";
 
-  if (!contratista || !CONTRATISTAS_TECNICOS[contratista]) {
-    select.innerHTML = '<option value="">-- Selecciona primero un Contratista --</option>';
-    select.disabled = true;
+  if (!contratista || contratista === "OTRO" || !CONTRATISTAS_TECNICOS[contratista]) {
+    if (contratista === "OTRO") {
+      select.style.display = "none";
+      if (manualTecnicoInput) {
+        manualTecnicoInput.style.display = "block";
+        if (preselectedTecnico) manualTecnicoInput.value = preselectedTecnico;
+      }
+    } else {
+      select.style.display = "block";
+      select.innerHTML = '<option value="">-- Selecciona primero un Contratista --</option>';
+      select.disabled = true;
+      if (manualTecnicoInput) {
+        manualTecnicoInput.style.display = "none";
+      }
+    }
     return;
   }
 
+  select.style.display = "block";
   select.disabled = false;
   const tecnicos = CONTRATISTAS_TECNICOS[contratista];
   select.innerHTML = '<option value="">-- Seleccionar Técnico --</option>';
 
   const targetTecnico = preselectedTecnico || userTecnico;
+  let isCustomTecnico = targetTecnico && !tecnicos.includes(targetTecnico);
+
   tecnicos.forEach(t => {
     const opt = document.createElement("option");
     opt.value = t;
@@ -203,19 +257,43 @@ function updateTecnicosDropdown(contratista, preselectedTecnico = "") {
     if (t === targetTecnico) opt.selected = true;
     select.appendChild(opt);
   });
+
+  // Opción "Otro" para técnicos
+  const optOtroTec = document.createElement("option");
+  optOtroTec.value = "OTRO";
+  optOtroTec.textContent = "Otro (Ingresar manualmente)...";
+  if (isCustomTecnico) {
+    optOtroTec.selected = true;
+  }
+  select.appendChild(optOtroTec);
+
+  if (manualTecnicoInput) {
+    if (isCustomTecnico) {
+      manualTecnicoInput.style.display = "block";
+      manualTecnicoInput.value = targetTecnico;
+    } else {
+      manualTecnicoInput.style.display = "none";
+    }
+  }
+}
+
+function onSetupTecnicoChange() {
+  const tecnicoSelect = document.getElementById("setupTecnico");
+  const manualTecnicoInput = document.getElementById("setupTecnicoManual");
+  if (!tecnicoSelect || !manualTecnicoInput) return;
+
+  if (tecnicoSelect.value === "OTRO") {
+    manualTecnicoInput.style.display = "block";
+    manualTecnicoInput.value = "";
+    manualTecnicoInput.focus();
+  } else {
+    manualTecnicoInput.style.display = "none";
+  }
 }
 
 function checkUserConfig() {
   userContratista = localStorage.getItem("TELMEX_CONTRATISTA") || "";
   userTecnico = localStorage.getItem("TELMEX_TECNICO") || "";
-
-  // Validar si el contratista y técnico guardados pertenecen a la lista oficial
-  if (userContratista && (!CONTRATISTAS_TECNICOS[userContratista] || (userTecnico && !CONTRATISTAS_TECNICOS[userContratista].includes(userTecnico)))) {
-    userContratista = "";
-    userTecnico = "";
-    localStorage.removeItem("TELMEX_CONTRATISTA");
-    localStorage.removeItem("TELMEX_TECNICO");
-  }
 
   updateHeaderUserInfo();
   updateFormUserDisplay();
@@ -226,8 +304,33 @@ function checkUserConfig() {
 }
 
 function openUserSetupModal() {
+  const manualContratistaInput = document.getElementById("setupContratistaManual");
+  const manualTecnicoInput = document.getElementById("setupTecnicoManual");
+  const tecnicoSelect = document.getElementById("setupTecnico");
+
   populateContratistasDropdown(userContratista);
-  updateTecnicosDropdown(userContratista, userTecnico);
+
+  if (userContratista && !CONTRATISTAS_TECNICOS[userContratista]) {
+    // Contratista manual personalizado
+    if (manualContratistaInput) {
+      manualContratistaInput.style.display = "block";
+      manualContratistaInput.value = userContratista;
+    }
+    if (tecnicoSelect) {
+      tecnicoSelect.style.display = "none";
+    }
+    if (manualTecnicoInput) {
+      manualTecnicoInput.style.display = "block";
+      manualTecnicoInput.value = userTecnico || "";
+    }
+  } else {
+    if (manualContratistaInput) {
+      manualContratistaInput.style.display = "none";
+      manualContratistaInput.value = "";
+    }
+    updateTecnicosDropdown(userContratista, userTecnico);
+  }
+
   const modal = document.getElementById("userSetupModal");
   if (modal) modal.style.display = "flex";
 }
@@ -238,16 +341,41 @@ function closeUserSetupModal() {
 }
 
 function saveUserConfig() {
-  const contratista = document.getElementById("setupContratista")?.value?.trim() || "";
-  const tecnico = document.getElementById("setupTecnico")?.value?.trim() || "";
+  const contratistaSelect = document.getElementById("setupContratista");
+  const manualContratistaInput = document.getElementById("setupContratistaManual");
+  const tecnicoSelect = document.getElementById("setupTecnico");
+  const manualTecnicoInput = document.getElementById("setupTecnicoManual");
 
-  if (!contratista) {
-    alert("⚠️ Por favor selecciona tu Contratista / Socio Comercial.");
-    return;
+  let contratista = "";
+  if (contratistaSelect?.value === "OTRO") {
+    contratista = manualContratistaInput?.value?.trim() || "";
+    if (!contratista) {
+      alert("⚠️ Por favor escribe el nombre de tu Contratista / Socio Comercial.");
+      manualContratistaInput?.focus();
+      return;
+    }
+  } else {
+    contratista = contratistaSelect?.value?.trim() || "";
+    if (!contratista) {
+      alert("⚠️ Por favor selecciona tu Contratista / Socio Comercial.");
+      return;
+    }
   }
-  if (!tecnico) {
-    alert("⚠️ Por favor selecciona tu Nombre de Técnico en Sitio.");
-    return;
+
+  let tecnico = "";
+  if (contratistaSelect?.value === "OTRO" || tecnicoSelect?.value === "OTRO") {
+    tecnico = manualTecnicoInput?.value?.trim() || "";
+    if (!tecnico) {
+      alert("⚠️ Por favor escribe el nombre completo del Técnico en Sitio.");
+      manualTecnicoInput?.focus();
+      return;
+    }
+  } else {
+    tecnico = tecnicoSelect?.value?.trim() || "";
+    if (!tecnico) {
+      alert("⚠️ Por favor selecciona tu Nombre de Técnico en Sitio.");
+      return;
+    }
   }
 
   userContratista = contratista;
