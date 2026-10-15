@@ -1029,6 +1029,9 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
       <div class="asset-detail" style="font-size:0.8rem; color:#64748b;">
         🛣️ Calle: ${item.calle || 'S/N'} ${item.colonia ? '| Colonia/Distrito: ' + item.colonia : ''}
       </div>
+      <div class="asset-detail" style="font-size:0.8rem; color:#0369a1; margin-top:2px;">
+        🌐 <strong>Latitud:</strong> ${item.lat != null ? item.lat : 'N/A'} | <strong>Longitud:</strong> ${item.lon != null ? item.lon : 'N/A'}
+      </div>
     `;
 
     card.onclick = () => selectAsset(item);
@@ -1051,7 +1054,8 @@ function selectAsset(item) {
   const infoEl = document.getElementById("modalAssetInfo");
   const typeBadge = (modalSelectedType === "CAJA") ? "📦 CAJA" : "📞 CASETA";
   if (idEl) idEl.innerText = `Activo: ${item.id} [${typeBadge}]`;
-  if (infoEl) infoEl.innerText = `📍 Estado: ${item.estado || 'N/A'} | Área: ${item.area_trabajo || item.municipio || 'N/A'} | Calle: ${item.calle || 'S/N'}`;
+  const coordsStr = (item.lat != null && item.lon != null) ? ` | Coords: ${item.lat}, ${item.lon}` : '';
+  if (infoEl) infoEl.innerText = `📍 Estado: ${item.estado || 'N/A'} | Área: ${item.area_trabajo || item.municipio || 'N/A'} | Calle: ${item.calle || 'S/N'}${coordsStr}`;
 
   renderModalTypeGrid();
 
@@ -1120,7 +1124,8 @@ function confirmAssetSelection() {
   document.getElementById("formAssetEstado").value = selectedAsset.estado || "DESCONOCIDO";
   document.getElementById("formAssetArea").value = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
   document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${modalSelectedModel}`;
-  document.getElementById("formAssetInfo").value = `Colonia/Distrito: ${selectedAsset.colonia || selectedAsset.municipio || 'N/A'} | Calle: ${selectedAsset.calle || 'S/N'}`;
+  const coordsStr = (selectedAsset.lat != null && selectedAsset.lon != null) ? ` | Coords: ${selectedAsset.lat}, ${selectedAsset.lon}` : '';
+  document.getElementById("formAssetInfo").value = `Colonia/Distrito: ${selectedAsset.colonia || selectedAsset.municipio || 'N/A'} | Calle: ${selectedAsset.calle || 'S/N'}${coordsStr}`;
 
   if (selectedAsset.oferta_sugerida) {
     document.getElementById("ofertaColocada").value = selectedAsset.oferta_sugerida;
