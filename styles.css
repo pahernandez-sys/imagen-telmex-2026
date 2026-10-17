@@ -202,6 +202,14 @@ input:focus, select:focus, textarea:focus {
   color: white;
 }
 
+.btn-warning {
+  background-color: #f59e0b;
+  color: white;
+}
+.btn-warning:hover {
+  background-color: #d97706;
+}
+
 .btn-outline {
   background-color: transparent;
   border: 1px solid var(--primary);

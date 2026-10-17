@@ -110,8 +110,16 @@
           💡 <em>Opcional: Búsqueda directa por ID o Calle</em>
         </div>
 
-        <div class="form-group" style="margin-top: 6px;">
+        <div class="form-group" style="margin-top: 6px; margin-bottom: 10px;">
           <input type="text" id="inputQuery" placeholder="Escribe ID (ej: ZIH0061 o Teléfono) o Calle..." oninput="onQueryInput()">
+        </div>
+
+        <!-- Botón para Registro Manual Fuera de Catálogo -->
+        <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
+          <button type="button" class="btn btn-warning" onclick="openManualAssetModal()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; font-size: 0.95rem; padding: 12px; border-radius: 10px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25); cursor: pointer;">
+            <span>➕</span>
+            <span>¿No aparece en la lista? Agregar Registro Manual</span>
+          </button>
         </div>
 
       </div>
@@ -143,7 +151,7 @@
 
           <!-- Datos del activo seleccionado -->
           <div class="form-group">
-            <label>Contratista & Técnico en Sitio (Guardados):</label>
+            <label>Contratista & Técnico en Sitio: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <div style="display:flex; gap:8px;">
               <input type="text" id="formContratista" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Contratista">
               <input type="text" id="formTecnico" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Técnico">
@@ -151,7 +159,7 @@
           </div>
 
           <div class="form-group">
-            <label>ID Activo Seleccionado:</label>
+            <label>ID Activo Seleccionado: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <input type="text" id="formAssetId" readonly style="background:#e9ecef; font-weight:bold;">
           </div>
 
@@ -164,7 +172,7 @@
           </div>
 
           <div class="form-group">
-            <label>Proceso & Modelo Seleccionado:</label>
+            <label>Proceso & Modelo Seleccionado: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <input type="text" id="formAssetDetails" readonly style="background:#e9ecef; font-weight:bold; color:var(--primary);">
           </div>
 
@@ -175,7 +183,7 @@
 
           <!-- Campo 1: ¿Existe? -->
           <div class="form-group">
-            <label>1. ¿Existe la Caja / Caseta en el Sitio?:</label>
+            <label>1. ¿Existe la Caja / Caseta en el Sitio?: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <div class="radio-group">
               <div class="radio-pill">
                 <input type="radio" id="exist_si" name="existencia" value="EXISTE" checked>
@@ -194,7 +202,7 @@
 
           <!-- Campo 2: Viniles instalados -->
           <div class="form-group">
-            <label>2. Número de Viniles Instalados:</label>
+            <label>2. Número de Viniles Instalados: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <select id="numViniles" required>
               <option value="0">0</option>
               <option value="1" selected>1</option>
@@ -206,22 +214,23 @@
 
           <!-- Campo 3: Oferta colocada -->
           <div class="form-group">
-            <label>3. Oferta Colocada:</label>
+            <label>3. Oferta Colocada: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
             <select id="ofertaColocada" required>
-              <option value="120 MB">120 MB</option>
+              <option value="120 MB" selected>120 MB</option>
+              <option value="200 MB">200 MB</option>
               <option value="250 MB">250 MB</option>
             </select>
           </div>
 
           <!-- Campo 4: Comentarios -->
           <div class="form-group">
-            <label>4. Comentarios u Observaciones de Campo:</label>
+            <label>4. Comentarios u Observaciones de Campo (Opcional):</label>
             <textarea id="comentarios" rows="3" placeholder="Detalles de la estructura, daños, etc..."></textarea>
           </div>
 
           <!-- Campo 5: Fotografías -->
           <div class="form-group">
-            <label>5. Evidencia Fotográfica (Foto DESPUÉS):</label>
+            <label>5. Evidencia Fotográfica (Foto DESPUÉS): <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* OBLIGATORIO</span></label>
             
             <!-- Input Oculto para Foto DESPUÉS -->
             <input type="file" id="inputCamDespues" accept="image/*" capture="camera" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
@@ -229,7 +238,7 @@
             <div class="photo-upload-grid" style="grid-template-columns: 1fr;">
               <!-- Foto Después -->
               <div class="photo-card">
-                <div class="photo-card-title">Foto DESPUÉS</div>
+                <div class="photo-card-title">Foto DESPUÉS <span style="color:#ef4444;">*</span></div>
                 <div class="photo-box" id="boxFotoDespues" onclick="openCameraModal('Despues')">
                   <span id="iconDespues" style="font-size:1.6rem;">📸</span>
                   <span class="photo-box-label" id="labelDespues">Sin foto</span>
@@ -247,7 +256,7 @@
           <!-- Campo 6: GPS Capturado de la Foto -->
           <div class="form-group" style="background:#f8fafc; padding:10px; border-radius:6px; border:1px solid #e2e8f0;">
             <label style="font-size:0.8rem; color:#475569; margin:0;">
-              📍 GPS de Captura en Campo:
+              📍 GPS de Captura en Campo: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span>
             </label>
             <div id="formGpsCoords" style="font-size:0.85rem; font-weight:bold; color:var(--primary); margin-top:4px;">
               Capturando GPS del dispositivo...
@@ -360,6 +369,88 @@
           Continuar a Evidencia ➔
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal para Agregar Registro Manual (Caja o Caseta Fuera de Catálogo) -->
+  <div id="manualAssetModal" class="modal-overlay" style="display:none; z-index:99999; background:rgba(15,23,42,0.85);">
+    <div style="background:#ffffff; border-radius:14px; padding:20px; width:92%; max-width:460px; box-shadow:0 12px 32px rgba(0,0,0,0.4); max-height:92vh; overflow-y:auto; animation: popIn 0.2s ease-out;">
+      
+      <div style="font-size:1.05rem; font-weight:bold; color:var(--primary); margin-bottom:10px; border-bottom:2px solid #e0f2fe; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <span>➕ Registrar Caja / Caseta No Catalogada</span>
+        <button type="button" onclick="closeManualAssetModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
+      </div>
+
+      <p style="font-size:0.83rem; color:#475569; margin-bottom:12px; line-height:1.4;">
+        Si encontraste una caja o caseta física en campo que no aparece en el catálogo, ingresa sus datos para continuar con el registro y la evidencia.
+      </p>
+
+      <!-- Paso 1: Elegir si es Caja o Caseta -->
+      <div class="form-group" style="margin-bottom:12px;">
+        <label style="color:#0055a5; font-weight:bold;">1. Tipo de Elemento: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio</span></label>
+        <div class="radio-group" style="display:flex; gap:8px;">
+          <div class="radio-pill" style="flex:1;">
+            <input type="radio" id="manual_tipo_caja" name="manualTipoSelect" value="CAJA" checked onchange="onManualTipoToggle('CAJA')">
+            <label for="manual_tipo_caja" style="text-align:center; padding:10px; font-weight:bold; font-size:0.95rem;">📦 Caja</label>
+          </div>
+          <div class="radio-pill" style="flex:1;">
+            <input type="radio" id="manual_tipo_caseta" name="manualTipoSelect" value="CASETA" onchange="onManualTipoToggle('CASETA')">
+            <label for="manual_tipo_caseta" style="text-align:center; padding:10px; font-weight:bold; font-size:0.95rem;">📞 Caseta</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paso 2: Número Identificador -->
+      <div class="form-group" style="margin-bottom:12px;">
+        <label id="manualIdLabel" style="color:#0055a5; font-weight:bold;">2. Identificador / Código de la Caja: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio</span></label>
+        <input type="text" id="manualAssetIdInput" placeholder="Ej: TLA0012, CJ-NOR-01..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem; text-transform:uppercase; box-sizing:border-box;" required>
+        <div id="manualIdHelper" style="font-size:0.75rem; color:#64748b; margin-top:4px;">
+          Ingresa el código o número identificador visible en la caja.
+        </div>
+      </div>
+
+      <!-- Paso 3: Catálogo de Modelos Disponibles -->
+      <div class="form-group" style="margin-bottom:14px;">
+        <label id="manualCatalogLabel" style="color:#0055a5; font-weight:bold;">3. Catálogo de Modelos de Cajas: <span style="color:#ef4444; font-size:0.75rem;">* Selecciona una</span></label>
+        <div id="manualModelGrid" class="type-catalog-grid" style="max-height:210px; overflow-y:auto; margin-top:6px; border:1px solid #e2e8f0; border-radius:8px; padding:6px;">
+          <!-- Renderizado dinámicamente según si es Caja o Caseta -->
+        </div>
+      </div>
+
+      <!-- Paso 4: Ubicación / Estado y Área -->
+      <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:14px; font-size:0.85rem;">
+        <div style="font-weight:bold; color:#334155; margin-bottom:6px;">📍 Ubicación Geográfica:</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div>
+            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Estado:</label>
+            <select id="manualEstadoSelect" onchange="onManualEstadoChange()" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
+              <option value="">-- Estado --</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Área de Trabajo:</label>
+            <select id="manualAreaSelect" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
+              <option value="">-- Área --</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:6px;">
+          <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Calle / Referencia (Opcional):</label>
+          <input type="text" id="manualCalleInput" placeholder="Ej: Av. Juárez esq. Morelos" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
+        </div>
+        <div id="manualGpsInfo" style="font-size:0.75rem; color:#0369a1; margin-top:6px;">
+          📡 GPS: Obteniendo ubicación...
+        </div>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn btn-secondary" onclick="closeManualAssetModal()" style="flex:1;">Cancelar</button>
+        <button type="button" class="btn btn-primary" onclick="confirmManualAssetSelection()" style="flex:2; font-weight:bold;">
+          Continuar al Registro ➔
+        </button>
+      </div>
+
     </div>
   </div>
 
