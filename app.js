@@ -775,6 +775,8 @@ function locateTechnician() {
       updateFormGpsDisplay();
 
       const completedAssetIds = getCompletedAssetIdsSet();
+      const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
+      const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
 
       // Calcular distancia Haversine a todos los registros del catálogo no completados
       const results = [];
@@ -783,6 +785,7 @@ function locateTechnician() {
         const itemId = String(item.id || "").trim().toUpperCase();
         const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
         if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) continue;
+        if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) continue;
         if (item.lat && item.lon) {
           const dist = haversineDistance(lat, lon, item.lat, item.lon);
           results.push({ ...item, dist_m: dist });
@@ -804,14 +807,30 @@ function locateTechnician() {
 
 function initGeolocation() {
   if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        currentGpsCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy };
-        updateFormGpsDisplay();
+    const geoSuccess = (pos) => {
+      const isFirst = !currentGpsCoords;
+      currentGpsCoords = {
+        lat: pos.coords.latitude,
+        lon: pos.coords.longitude,
+        accuracy: pos.coords.accuracy
+      };
+      updateFormGpsDisplay();
+      if (isFirst) {
         applyHierarchyFilter();
-      },
+      }
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      geoSuccess,
       (err) => console.log("GPS no disponible aún"),
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 5000 }
+    );
+
+    // Rastreo continuo mientras el técnico se traslada en campo
+    navigator.geolocation.watchPosition(
+      geoSuccess,
+      (err) => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
     );
   }
 }
@@ -898,9 +917,8 @@ function applyHierarchyFilter() {
   const mode = document.querySelector('input[name="searchSelectionMode"]:checked')?.value || "AUTO";
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
   
-  const isTodos = document.getElementById("elemento_todos")?.checked;
-  const isCaseta = document.getElementById("elemento_caseta")?.checked;
-  const tipoFilter = isTodos ? "TODOS" : (isCaseta ? "CASETA" : "CAJA");
+  const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
+  const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
 
   // Set de IDs ya capturados para evitar duplicados
   const completedAssetIds = getCompletedAssetIdsSet();
@@ -956,12 +974,16 @@ function onQueryInput() {
     return;
   }
 
+  const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
+  const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
+
   const completedAssetIds = getCompletedAssetIdsSet();
 
   let matches = catalog.filter(item => {
     const itemId = String(item.id || "").trim().toUpperCase();
     const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
     if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false; // Excluir completados permanentemente
+    if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) return false;
     return (item.id && item.id.toUpperCase().includes(q)) || 
            (item.calle && item.calle.toUpperCase().includes(q)) ||
            (item.municipio && item.municipio.toUpperCase().includes(q)) ||
@@ -1020,14 +1042,16 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
       distBadge = `<span class="asset-badge" style="background:#15803d; color:white; font-weight:bold; font-size:0.75rem; padding:3px 8px; border-radius:6px; margin-left:4px;">${distLabel}</span>`;
     }
 
-    const badgeColor = item.tipo === 'CASETA' ? '#0055a5' : '#00a8cc';
-    const displayModel = item.modelo_tipo || (item.tipo === 'CASETA' ? 'NORMAL' : 'Sencilla');
+    const isCaseta = item.tipo === 'CASETA';
+    const typeIcon = isCaseta ? '📞' : '📦';
+    const badgeColor = isCaseta ? '#0055a5' : '#0891b2';
+    const displayModel = item.modelo_tipo || (isCaseta ? 'NORMAL' : 'Sencilla');
 
     card.innerHTML = `
       <div class="asset-header" style="align-items:center;">
         <span style="font-size:1rem; font-weight:bold; color:var(--primary);">${item.id}</span>
         <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
-          <span class="asset-badge" style="background:${badgeColor}; color:white; font-weight:bold;">${item.tipo} (${displayModel})</span>
+          <span class="asset-badge" style="background:${badgeColor}; color:white; font-weight:bold;">${typeIcon} ${item.tipo} (${displayModel})</span>
           ${distBadge}
         </div>
       </div>

@@ -87,6 +87,25 @@
           </div>
         </div>
 
+        <!-- Paso 2: Filtro de Estructuras (Todas, Solo Casetas, Solo Cajas) -->
+        <div class="form-group" style="margin-top: 10px;">
+          <label>Paso 2: Tipo de Estructura a Mostrar:</label>
+          <div class="radio-group">
+            <div class="radio-pill">
+              <input type="radio" id="elemento_todos" name="filterElemento" value="TODOS" checked onchange="applyHierarchyFilter()">
+              <label for="elemento_todos">🌐 Todas</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" id="elemento_caseta" name="filterElemento" value="CASETA" onchange="applyHierarchyFilter()">
+              <label for="elemento_caseta">📞 Casetas</label>
+            </div>
+            <div class="radio-pill">
+              <input type="radio" id="elemento_caja" name="filterElemento" value="CAJA" onchange="applyHierarchyFilter()">
+              <label for="elemento_caja">📦 Cajas</label>
+            </div>
+          </div>
+        </div>
+
 
 
         <!-- Contenedor de Filtros Manuales (Estado y Área de Trabajo) -->
