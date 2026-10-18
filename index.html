@@ -133,11 +133,11 @@
           <input type="text" id="inputQuery" placeholder="Escribe ID (ej: ZIH0061 o Teléfono) o Calle..." oninput="onQueryInput()">
         </div>
 
-        <!-- Botón para Registro Manual Fuera de Catálogo -->
+        <!-- Botón para Registro Manual Fuera de Catálogo / Base de Datos -->
         <div style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #cbd5e1;">
           <button type="button" class="btn btn-warning" onclick="openManualAssetModal()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: bold; font-size: 0.95rem; padding: 12px; border-radius: 10px; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.25); cursor: pointer;">
             <span>➕</span>
-            <span>¿No aparece en la lista? Agregar Registro Manual</span>
+            <span>¿No existe en base de datos? Agregar manualmente</span>
           </button>
         </div>
 
@@ -183,10 +183,11 @@
           </div>
 
           <div class="form-group">
-            <label>Estado & Área de Trabajo (Auto-asignados):</label>
+            <label>Estado, Área de Trabajo & Catálogo BD:</label>
             <div style="display:flex; gap:8px;">
               <input type="text" id="formAssetEstado" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Estado">
               <input type="text" id="formAssetArea" readonly style="background:#e0f2fe; color:#0369a1; font-weight:bold; flex:1;" placeholder="Área de Trabajo">
+              <input type="text" id="formAssetExisteBD" readonly style="background:#f0fdf4; color:#15803d; font-weight:bold; flex:0.9;" placeholder="En BD: Sí">
             </div>
           </div>
 
@@ -396,12 +397,12 @@
     <div style="background:#ffffff; border-radius:14px; padding:20px; width:92%; max-width:460px; box-shadow:0 12px 32px rgba(0,0,0,0.4); max-height:92vh; overflow-y:auto; animation: popIn 0.2s ease-out;">
       
       <div style="font-size:1.05rem; font-weight:bold; color:var(--primary); margin-bottom:10px; border-bottom:2px solid #e0f2fe; padding-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-        <span>➕ Registrar Caja / Caseta No Catalogada</span>
+        <span>➕ Registrar Caja / Caseta (No existe en base de datos)</span>
         <button type="button" onclick="closeManualAssetModal()" style="background:none; border:none; font-size:1.2rem; cursor:pointer; color:#64748b;">✕</button>
       </div>
 
       <p style="font-size:0.83rem; color:#475569; margin-bottom:12px; line-height:1.4;">
-        Si encontraste una caja o caseta física en campo que no aparece en el catálogo, ingresa sus datos para continuar con el registro y la evidencia.
+        Si encontraste una caja o caseta física en campo que no aparece en la base de datos, ingresa sus datos para continuar con el registro y la evidencia.
       </p>
 
       <!-- Paso 1: Elegir si es Caja o Caseta -->

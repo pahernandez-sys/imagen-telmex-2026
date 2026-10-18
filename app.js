@@ -96,7 +96,7 @@ const CONTRATISTAS_TECNICOS = {
     "Raul Ruenes Malagon"
   ],
   "Ernesto Aparicio Hernandez": [
-    "Lucino Garduño Quiroz",
+    "Lucina Villanueva Hernández",
     "Salmon Vega Guerrero"
   ],
   "Jose antonio Esquivel": [
@@ -108,7 +108,7 @@ const CONTRATISTAS_TECNICOS = {
     "Ramon Aguilar",
     "Emilio Cruz"
   ],
-  "Lucino Garduño Quiroz": [
+  "Lucina Villanueva Hernández": [
     "Ernesto Aparicio Hernandez",
     "Carlos de Dios Hidalgo"
   ],
@@ -1021,7 +1021,7 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
         <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:12px;">No se encontraron activos para los criterios seleccionados.</p>
         <button type="button" class="btn btn-warning" onclick="openManualAssetModal()" style="font-weight:bold; font-size:0.9rem; padding:10px 16px; border-radius:8px; display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
           <span>➕</span>
-          <span>Registrar Caja o Caseta Fuera de Catálogo</span>
+          <span>¿No existe en base de datos? Agregar manualmente</span>
         </button>
       </div>
     `;
@@ -1140,6 +1140,9 @@ function confirmAssetSelection() {
   selectedAsset = { ...pendingAsset };
   selectedAsset.tipo = modalSelectedType;
   selectedAsset.modelo_tipo = modalSelectedModel;
+  selectedAsset.is_manual = false;
+  selectedAsset.is_fuera_catalogo = false;
+  selectedAsset.existe_en_bd = "Sí";
   selectedModelFilter = modalSelectedModel;
 
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
@@ -1155,6 +1158,12 @@ function confirmAssetSelection() {
   document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${selectedAsset.id})`;
   document.getElementById("formAssetEstado").value = selectedAsset.estado || "DESCONOCIDO";
   document.getElementById("formAssetArea").value = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
+  const existeBdEl = document.getElementById("formAssetExisteBD");
+  if (existeBdEl) {
+    existeBdEl.value = "En BD: Sí";
+    existeBdEl.style.background = "#f0fdf4";
+    existeBdEl.style.color = "#15803d";
+  }
   document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${modalSelectedModel}`;
   const coordsStr = (selectedAsset.lat != null && selectedAsset.lon != null) ? ` | Coords: ${selectedAsset.lat}, ${selectedAsset.lon}` : '';
   document.getElementById("formAssetInfo").value = `Colonia/Distrito: ${selectedAsset.colonia || selectedAsset.municipio || 'N/A'} | Calle: ${selectedAsset.calle || 'S/N'}${coordsStr}`;
@@ -1369,6 +1378,8 @@ function confirmManualAssetSelection() {
     lat: latVal,
     lon: lonVal,
     is_manual: true,
+    is_fuera_catalogo: true,
+    existe_en_bd: "No",
     unique_id: uniqueId
   };
 
@@ -1378,13 +1389,19 @@ function confirmManualAssetSelection() {
 
   // Actualizar alerta de activo seleccionado
   document.getElementById("activeAssetAlert").style.display = "block";
-  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${manualSelectedModel} - MANUAL) - ${areaVal}, ${estadoVal}`;
+  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${manualSelectedModel} - NO EN BD) - ${areaVal}, ${estadoVal}`;
 
   // Llenar campos del formulario
-  document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${selectedAsset.id}) [MANUAL]`;
+  document.getElementById("formAssetId").value = `${uniqueId} (Ref: ${selectedAsset.id}) [NO EN BD]`;
   document.getElementById("formAssetEstado").value = estadoVal;
   document.getElementById("formAssetArea").value = areaVal;
-  document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${manualSelectedModel} (Registro Manual)`;
+  const existeBdEl = document.getElementById("formAssetExisteBD");
+  if (existeBdEl) {
+    existeBdEl.value = "En BD: No";
+    existeBdEl.style.background = "#fffbeb";
+    existeBdEl.style.color = "#b45309";
+  }
+  document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${manualSelectedModel} (No existe en BD)`;
   const coordsStr = (latVal != null && lonVal != null) ? ` | Coords GPS: ${latVal.toFixed(6)}, ${lonVal.toFixed(6)}` : '';
   document.getElementById("formAssetInfo").value = `Calle: ${calleVal}${coordsStr}`;
 
@@ -1393,7 +1410,7 @@ function confirmManualAssetSelection() {
   closeManualAssetModal();
   switchView('form');
 
-  showCustomAlert(`✅ <strong>Registro Manual Preparado:</strong><br><br><strong>Folio:</strong> ${uniqueId}<br><strong>ID / Ref:</strong> ${rawId}<br><strong>Tipo:</strong> ${manualSelectedType} (${manualSelectedModel})<br><br>Continúa con el llenado de los campos requeridos y toma la <strong>Foto DESPUÉS</strong> para guardar la evidencia.`, "Registro Manual en Campo");
+  showCustomAlert(`✅ <strong>Registro Manual Fuera de BD Preparado:</strong><br><br><strong>Folio:</strong> ${uniqueId}<br><strong>ID / Ref:</strong> ${rawId}<br><strong>Tipo:</strong> ${manualSelectedType} (${manualSelectedModel})<br><strong>¿Existe en BD?:</strong> No<br><br>Continúa con el llenado de los campos requeridos y toma la <strong>Foto DESPUÉS</strong> para guardar la evidencia.`, "Registro Manual en Campo");
 }
 
 // ---------------------------------------------------------
@@ -1512,6 +1529,8 @@ function saveEvidence(event) {
   const areaVal = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
   const uniqueId = selectedAsset.unique_id || generateUniqueId(selectedAsset.tipo, areaVal);
 
+  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
+
   const evidenceRecord = {
     id_registro_local: "EV_" + Date.now(),
     unique_id: uniqueId,
@@ -1521,12 +1540,14 @@ function saveEvidence(event) {
     proceso: proceso,
     tipo_elemento: selectedAsset.tipo,
     modelo_tipo: selectedModelFilter,
-    estado: selectedAsset.estado,
-    area_trabajo: selectedAsset.area_trabajo,
-    municipio: selectedAsset.municipio,
-    calle: selectedAsset.calle,
+    estado: selectedAsset.estado || "",
+    area_trabajo: selectedAsset.area_trabajo || selectedAsset.municipio || "",
+    municipio: selectedAsset.municipio || "",
+    calle: selectedAsset.calle || "",
     lat_original: selectedAsset.lat,
     lon_original: selectedAsset.lon,
+    is_manual: isManualAsset,
+    existe_en_bd: isManualAsset ? "No" : "Sí",
     
     // Captura en Campo
     existencia: existencia,
@@ -1557,6 +1578,8 @@ function saveEvidence(event) {
   document.getElementById("formAssetId").value = "";
   document.getElementById("formAssetEstado").value = "";
   document.getElementById("formAssetArea").value = "";
+  const resetBdEl = document.getElementById("formAssetExisteBD");
+  if (resetBdEl) resetBdEl.value = "";
   document.getElementById("formAssetInfo").value = "";
   document.getElementById("evidenceForm").reset();
   photoDespuesBase64 = "";
@@ -1772,16 +1795,21 @@ function renderSavedEvidences() {
     card.style.marginBottom = "10px";
     card.style.borderLeft = "4px solid var(--primary)";
 
+    const isManualEv = ev.is_manual === true || ev.is_fuera_catalogo === true || ev.existe_en_bd === "No" || String(ev.unique_id || "").includes("MANUAL") || String(ev.asset_id || "").includes("MANUAL");
+    const bdBadge = isManualEv 
+      ? '<span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">No en BD</span>'
+      : '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">En BD: Sí</span>';
+
     card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:0.9rem;">
-        <span>${ev.asset_id} (${ev.tipo_elemento})</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:0.9rem;">
+        <span>${ev.asset_id} (${ev.tipo_elemento}) ${bdBadge}</span>
         <span style="color:var(--text-muted); font-size:0.75rem;">${new Date(ev.fecha_captura).toLocaleTimeString()}</span>
       </div>
       <div style="font-size:0.8rem; color:var(--text-dark); margin-top:4px;">
         📌 Estado: <strong>${ev.existencia}</strong> | Trabajo: <strong>${ev.proceso || 'IMAGEN'}</strong> | Viniles: <strong>${ev.num_viniles}</strong> | Oferta: <strong>${ev.oferta_colocada}</strong>
       </div>
       <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-        📍 GPS Foto: ${ev.gps_captura_lat ? `${ev.gps_captura_lat.toFixed(5)}, ${ev.gps_captura_lon.toFixed(5)}` : 'Sin GPS'}
+        📍 Área: ${ev.area_trabajo || 'N/A'} (${ev.estado || 'N/A'}) | GPS Foto: ${ev.gps_captura_lat ? `${ev.gps_captura_lat.toFixed(5)}, ${ev.gps_captura_lon.toFixed(5)}` : 'Sin GPS'}
       </div>
     `;
 
@@ -1832,8 +1860,12 @@ async function syncAllToLinkaform() {
 
   const LINKAFORM_API_URL = "https://app.linkaform.com/api/infosync/form_answer/";
   const LINKAFORM_FIELDS = {
-    tipo: "69e7b9e52916bf387aa43313",
-    distrito_telefono: "69e7b9e52916bf387aa43314",
+    tipo: "6ad52fc6bc424ea79992eabe",
+    distrito_telefono: "6ad52fc6bc424ea79992eabf",
+    estado: "6ad52fc6bc424ea79992eac0",
+    area_trabajo: "6ad52fc6bc424ea79992eac1",
+    existe_en_bd: "6ad530403c0c04d9bb2555b2",
+    comentarios: "6ad4df593c0c04d9bb25556e",
     id_unico: "6ab6f3a4c472baf119e176e7",
     latitud: "6ab6f3a4c472baf119e176e8",
     longitud: "6ab6f3a4c472baf119e176e9",
@@ -1858,12 +1890,12 @@ async function syncAllToLinkaform() {
     const exist_str = (ev.existencia || "EXISTE").toLowerCase();
     const existencia_val = (exist_str.includes("existe") || exist_str.includes("si")) ? "sí" : "no";
     const rawOferta = String(ev.oferta_colocada || "120 MB");
-    let oferta_val = "120 MB";
-    if (rawOferta.includes("250")) oferta_val = "250 MB";
-    else if (rawOferta.includes("200")) oferta_val = "200 MB";
-    else oferta_val = "120 MB";
+    let oferta_val = "120_mb";
+    if (rawOferta.includes("250")) oferta_val = "250_mb";
+    else if (rawOferta.includes("200")) oferta_val = "200_mb";
+    else oferta_val = "120_mb";
     const proc_str = (ev.proceso || "IMAGEN").toLowerCase();
-    const tipo_trabajo_val = proc_str.includes("limpieza") ? "Limpieza" : "Imagen";
+    const tipo_trabajo_val = proc_str.includes("limpieza") ? "limpieza" : "imagen";
     const num_viniles_val = String(ev.num_viniles !== undefined && ev.num_viniles !== null ? ev.num_viniles : 1);
     const asset_id = String(ev.asset_id || "S/N");
     const unique_id = String(ev.unique_id || asset_id);
@@ -1873,9 +1905,18 @@ async function syncAllToLinkaform() {
     const contratista_val = String(ev.contratista || userContratista || "N/A");
     const tecnico_val = String(ev.tecnico || userTecnico || "N/A");
 
+    const isManual = ev.is_manual === true || ev.is_fuera_catalogo === true || ev.existe_en_bd === "No" || String(ev.unique_id || "").includes("MANUAL") || String(ev.asset_id || "").includes("MANUAL");
+    const existeEnBdVal = isManual ? "No" : "Sí";
+    const estadoVal = String(ev.estado || "").trim();
+    const areaTrabajoVal = String(ev.area_trabajo || ev.municipio || "").trim();
+
     const answers = {
       [LINKAFORM_FIELDS.tipo]: (ev.tipo_elemento || "CASETA").toUpperCase(),
       [LINKAFORM_FIELDS.distrito_telefono]: asset_id,
+      [LINKAFORM_FIELDS.estado]: estadoVal,
+      [LINKAFORM_FIELDS.area_trabajo]: areaTrabajoVal,
+      [LINKAFORM_FIELDS.existe_en_bd]: existeEnBdVal,
+      [LINKAFORM_FIELDS.comentarios]: String(ev.comentarios || "Sin observaciones"),
       [LINKAFORM_FIELDS.id_unico]: unique_id,
       [LINKAFORM_FIELDS.latitud]: lat_val,
       [LINKAFORM_FIELDS.longitud]: lon_val,
