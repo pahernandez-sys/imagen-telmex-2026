@@ -149,6 +149,10 @@
           <span id="searchResultsTitle">📍 35 Opciones Más Cercanas a tu Ubicación</span>
           <span id="resultCount" style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">0 activos</span>
         </div>
+        <div style="font-size:0.75rem; color:#0369a1; background:#f0f9ff; border:1px solid #bae6fd; border-radius:6px; padding:6px 10px; margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+          <span>🗺️</span>
+          <span><strong>Tip:</strong> Deja presionado cualquier activo o pulsa <strong>Maps</strong> para abrir su ubicación en Google Maps.</span>
+        </div>
         <div id="searchResultsList" style="max-height: 420px; overflow-y: auto;">
           <p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:20px;">
             📡 Obteniendo ubicación GPS para mostrar las 35 cajas o casetas más cercanas...
@@ -371,7 +375,12 @@
       
       <!-- Info del Activo Seleccionado -->
       <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:12px;">
-        <div id="modalAssetId" style="font-size:0.95rem; font-weight:bold; color:var(--primary);">ID</div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div id="modalAssetId" style="font-size:0.95rem; font-weight:bold; color:var(--primary);">ID</div>
+          <button type="button" class="btn-card-maps" onclick="openPendingAssetInGoogleMaps()" style="padding:2px 8px;">
+            🗺️ Ver en Maps
+          </button>
+        </div>
         <div id="modalAssetInfo" style="font-size:0.8rem; color:#475569; margin-top:4px;">Ubicación</div>
       </div>
 
@@ -389,6 +398,50 @@
           Continuar a Evidencia ➔
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Modal con Mapa Integrado del Activo (Previene errores de URL scheme y muestra ubicación directa) -->
+  <div id="assetMapModal" class="modal-overlay" style="display:none; z-index:999999; background:rgba(15,23,42,0.85);">
+    <div style="background:#ffffff; border-radius:14px; padding:18px; width:94%; max-width:480px; box-shadow:0 12px 32px rgba(0,0,0,0.4); max-height:94vh; overflow-y:auto; animation: popIn 0.2s ease-out; display:flex; flex-direction:column; gap:10px;">
+      
+      <!-- Encabezado del Modal -->
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid #e0f2fe; padding-bottom:8px;">
+        <div>
+          <div style="font-size:0.75rem; font-weight:bold; color:var(--primary); text-transform:uppercase;">🗺️ Mapa del Activo</div>
+          <div id="mapModalAssetTitle" style="font-size:1.1rem; font-weight:bold; color:#0f172a;">ID ACTIVO</div>
+        </div>
+        <button type="button" onclick="closeAssetMapModal()" style="background:#f1f5f9; border:none; border-radius:50%; width:32px; height:32px; font-size:1.1rem; cursor:pointer; color:#475569; display:flex; align-items:center; justify-content:center;">✕</button>
+      </div>
+
+      <!-- Detalles de Ubicación y Coordenadas -->
+      <div style="background:#f8fafc; padding:8px 10px; border-radius:8px; border:1px solid #e2e8f0; font-size:0.8rem; color:#334155;">
+        <div id="mapModalAssetLocation">📍 Ubicación...</div>
+        <div id="mapModalAssetCoords" style="color:#0369a1; font-weight:600; margin-top:2px;">🌐 Coordenadas: ...</div>
+        <div id="mapModalDistance" style="color:#15803d; font-weight:bold; margin-top:2px;">📏 Distancia: Calculando...</div>
+      </div>
+
+      <!-- Contenedor del Mapa -->
+      <div style="position:relative; width:100%; height:300px; border-radius:10px; overflow:hidden; border:1.5px solid #cbd5e1; background:#e2e8f0;">
+        <iframe id="mapModalIframe" src="about:blank" style="width:100%; height:100%; border:none;" loading="lazy"></iframe>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+        <button type="button" id="btnOpenExternalNav" class="btn btn-success" onclick="openExternalNavigationFromModal()" style="width:100%; font-weight:bold; padding:10px; font-size:0.9rem; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span>🚗</span>
+          <span>Navegar con Google Maps / Waze</span>
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-secondary" onclick="closeAssetMapModal()" style="flex:1;">
+            Cerrar
+          </button>
+          <button type="button" class="btn btn-primary" onclick="proceedFromMapToEvidence()" style="flex:2; font-weight:bold;">
+            Continuar al Registro ➔
+          </button>
+        </div>
+      </div>
+
     </div>
   </div>
 

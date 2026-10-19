@@ -629,6 +629,28 @@ function showNetworkToast(isOnline) {
   }, 3000);
 }
 
+function showFloatingToast(message, type = 'info') {
+  let toast = document.getElementById("appFloatingToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "appFloatingToast";
+    document.body.appendChild(toast);
+  }
+
+  toast.className = `network-toast ${type}`;
+  toast.innerText = message;
+  toast.style.display = "block";
+  toast.style.opacity = "1";
+
+  if (toast._timer) clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => {
+    toast.style.opacity = "0";
+    setTimeout(() => {
+      toast.style.display = "none";
+    }, 350);
+  }, 2500);
+}
+
 // ---------------------------------------------------------
 // VISTA Y NAVEGACIÓN
 // ---------------------------------------------------------
@@ -1005,6 +1027,126 @@ function onQueryInput() {
 }
 
 // ---------------------------------------------------------
+// FUNCIONES DE UBICACIÓN Y MAPA INTEGRADO (CERO ERRORES DE REDIRECCIÓN)
+// ---------------------------------------------------------
+let currentMapModalAsset = null;
+
+function openInGoogleMaps(lat, lon, label) {
+  // Buscar el objeto activo por ID o coordenadas
+  let found = null;
+  if (pendingAsset && (pendingAsset.id === label || (pendingAsset.lat == lat && pendingAsset.lon == lon))) {
+    found = pendingAsset;
+  }
+  if (!found && typeof fullCatalog !== 'undefined' && Array.isArray(fullCatalog)) {
+    found = fullCatalog.find(a => a.id === label || (a.lat == lat && a.lon == lon));
+  }
+  if (!found) {
+    found = { id: label || 'Activo', lat: lat, lon: lon, tipo: 'ACTIVO', estado: '', area_trabajo: '', calle: '' };
+  }
+  openAssetMapModal(found);
+}
+
+function openAssetMapModal(item) {
+  if (!item) return;
+
+  if (item.lat == null || item.lon == null || isNaN(Number(item.lat)) || isNaN(Number(item.lon)) || (Number(item.lat) === 0 && Number(item.lon) === 0)) {
+    alert(`⚠️ El activo ${item.id || ''} no cuenta con coordenadas válidas registradas en la base de datos.`);
+    return;
+  }
+
+  currentMapModalAsset = item;
+  const cleanLat = Number(item.lat);
+  const cleanLon = Number(item.lon);
+
+  // Vibración háptica suave
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate([50, 30, 50]); } catch (e) {}
+  }
+
+  const titleEl = document.getElementById("mapModalAssetTitle");
+  const locEl = document.getElementById("mapModalAssetLocation");
+  const coordsEl = document.getElementById("mapModalAssetCoords");
+  const distEl = document.getElementById("mapModalDistance");
+  const iframeEl = document.getElementById("mapModalIframe");
+
+  const displayModel = item.modelo_tipo || (item.tipo === 'CASETA' ? 'NORMAL' : 'Sencilla');
+  if (titleEl) titleEl.innerText = `${item.id} [${item.tipo === 'CASETA' ? '📞' : '📦'} ${item.tipo} (${displayModel})]`;
+  if (locEl) locEl.innerHTML = `📍 <strong>Estado:</strong> ${item.estado || 'N/A'} | 🏢 <strong>Área:</strong> ${item.area_trabajo || item.municipio || 'N/A'}<br>🛣️ <strong>Calle:</strong> ${item.calle || 'S/N'}${item.colonia ? ' | Col: ' + item.colonia : ''}`;
+  if (coordsEl) coordsEl.innerHTML = `🌐 <strong>Lat:</strong> ${cleanLat.toFixed(6)} | <strong>Lon:</strong> ${cleanLon.toFixed(6)}`;
+
+  // Cálculo de distancia en tiempo real con respecto al GPS del técnico
+  if (distEl) {
+    if (currentGpsCoords && currentGpsCoords.lat && currentGpsCoords.lon) {
+      const d = Math.round(haversineDistance(currentGpsCoords.lat, currentGpsCoords.lon, cleanLat, cleanLon));
+      const distFormatted = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d.toLocaleString()} metros`;
+      distEl.innerText = `📏 Distancia: A ${distFormatted} de tu posición GPS actual`;
+      distEl.style.display = "block";
+    } else if (item.dist_m && item.dist_m < 99999900) {
+      const d = Math.round(item.dist_m);
+      const distFormatted = d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${d.toLocaleString()} metros`;
+      distEl.innerText = `📏 Distancia aproximada: A ${distFormatted}`;
+      distEl.style.display = "block";
+    } else {
+      distEl.innerText = `📏 Distancia: Activa tu GPS para calcular cercanía`;
+    }
+  }
+
+  // Carga del mapa integrado seguro (OpenStreetMap embed con pin exacto: nunca redirige a intent://)
+  if (iframeEl) {
+    const delta = 0.003;
+    const osmUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${cleanLon - delta}%2C${cleanLat - delta * 0.7}%2C${cleanLon + delta}%2C${cleanLat + delta * 0.7}&layer=mapnik&marker=${cleanLat}%2C${cleanLon}`;
+    iframeEl.src = osmUrl;
+  }
+
+  const modal = document.getElementById("assetMapModal");
+  if (modal) modal.style.display = "flex";
+}
+
+function closeAssetMapModal() {
+  const modal = document.getElementById("assetMapModal");
+  if (modal) modal.style.display = "none";
+  const iframeEl = document.getElementById("mapModalIframe");
+  if (iframeEl) iframeEl.src = "about:blank";
+}
+
+function openExternalNavigationFromModal() {
+  if (!currentMapModalAsset) return;
+  const lat = Number(currentMapModalAsset.lat);
+  const lon = Number(currentMapModalAsset.lon);
+  const label = currentMapModalAsset.id || 'Activo Telmex';
+
+  showFloatingToast(`🚗 Abriendo navegación para ${label}...`, 'info');
+
+  // Si estamos en la APK de Android (usar Intent nativo geo: sin pasar por la web)
+  if (window.AndroidBridge && typeof window.AndroidBridge.openMaps === 'function') {
+    try {
+      window.AndroidBridge.openMaps(lat, lon, label);
+      return;
+    } catch (e) {
+      console.warn("Fallo AndroidBridge.openMaps:", e);
+    }
+  }
+
+  // En navegador Web o PWA (abrir ruta directa en nueva ventana)
+  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`;
+  window.open(navUrl, "_blank");
+}
+
+function proceedFromMapToEvidence() {
+  if (currentMapModalAsset) {
+    const asset = currentMapModalAsset;
+    closeAssetMapModal();
+    selectAsset(asset);
+  }
+}
+
+function openPendingAssetInGoogleMaps() {
+  if (pendingAsset) {
+    openAssetMapModal(pendingAsset);
+  }
+}
+
+// ---------------------------------------------------------
 // RENDERIZADO DE RESULTADOS DE BÚSQUEDA
 // ---------------------------------------------------------
 function renderSearchResults(items, isGpsSearch, completedCount = 0) {
@@ -1061,12 +1203,116 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
       <div class="asset-detail" style="font-size:0.8rem; color:#64748b;">
         🛣️ Calle: ${item.calle || 'S/N'} ${item.colonia ? '| Colonia/Distrito: ' + item.colonia : ''}
       </div>
-      <div class="asset-detail" style="font-size:0.8rem; color:#0369a1; margin-top:2px;">
-        🌐 <strong>Latitud:</strong> ${item.lat != null ? item.lat : 'N/A'} | <strong>Longitud:</strong> ${item.lon != null ? item.lon : 'N/A'}
+      <div class="asset-detail" style="font-size:0.8rem; color:#0369a1; margin-top:4px; display:flex; justify-content:space-between; align-items:center;">
+        <span>🌐 <strong>Lat:</strong> ${item.lat != null ? item.lat : 'N/A'} | <strong>Lon:</strong> ${item.lon != null ? item.lon : 'N/A'}</span>
+        <button type="button" class="btn-card-maps" title="Abrir ubicación en Google Maps">
+          🗺️ Maps
+        </button>
       </div>
     `;
 
-    card.onclick = () => selectAsset(item);
+    // Botón directo para Maps
+    const mapsBtn = card.querySelector(".btn-card-maps");
+    if (mapsBtn) {
+      mapsBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        openAssetMapModal(item);
+      });
+      mapsBtn.addEventListener("touchstart", (e) => e.stopPropagation(), { passive: true });
+      mapsBtn.addEventListener("mousedown", (e) => e.stopPropagation());
+    }
+
+    // Detección de Pulsación Prolongada (Long-Press: 550ms sostenido)
+    let pressTimer = null;
+    let didLongPress = false;
+    let startX = 0;
+    let startY = 0;
+
+    const startPress = (clientX, clientY) => {
+      didLongPress = false;
+      startX = clientX;
+      startY = clientY;
+      card.classList.add("pressing-feedback");
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        didLongPress = true;
+        card.classList.remove("pressing-feedback");
+        openAssetMapModal(item);
+      }, 550);
+    };
+
+    const cancelPress = () => {
+      clearTimeout(pressTimer);
+      card.classList.remove("pressing-feedback");
+    };
+
+    // Eventos táctiles (Móvil / Tablet)
+    card.addEventListener("touchstart", (e) => {
+      if (e.touches && e.touches.length === 1) {
+        startPress(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    card.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches.length === 1) {
+        const dist = Math.hypot(e.touches[0].clientX - startX, e.touches[0].clientY - startY);
+        if (dist > 10) {
+          cancelPress();
+        }
+      }
+    }, { passive: true });
+
+    card.addEventListener("touchend", () => {
+      cancelPress();
+    }, { passive: true });
+
+    card.addEventListener("touchcancel", () => {
+      cancelPress();
+    }, { passive: true });
+
+    // Eventos de ratón (Escritorio / Laptop)
+    card.addEventListener("mousedown", (e) => {
+      if (e.button === 0) {
+        startPress(e.clientX, e.clientY);
+      }
+    });
+
+    card.addEventListener("mousemove", (e) => {
+      if (pressTimer) {
+        const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
+        if (dist > 10) {
+          cancelPress();
+        }
+      }
+    });
+
+    card.addEventListener("mouseup", () => {
+      cancelPress();
+    });
+
+    card.addEventListener("mouseleave", () => {
+      cancelPress();
+    });
+
+    // Desactivar menú contextual nativo si se dejó oprimido
+    card.addEventListener("contextmenu", (e) => {
+      if (didLongPress) {
+        e.preventDefault();
+      }
+    });
+
+    // Selección regular al pulsar/tocar normalmente
+    card.onclick = (e) => {
+      if (didLongPress) {
+        e.preventDefault();
+        e.stopPropagation();
+        setTimeout(() => { didLongPress = false; }, 300);
+        return;
+      }
+      selectAsset(item);
+    };
+
     listDiv.appendChild(card);
   });
 }
