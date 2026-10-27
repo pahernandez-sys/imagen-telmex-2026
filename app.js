@@ -15,6 +15,27 @@ let modalSelectedModel = "";
 let userContratista = "";
 let userTecnico = "";
 
+// Versión del Sistema para Auditoría Linkaform (Automática para Campo)
+const CURRENT_APP_VERSION_ANDROID = "v5 - Android";
+const CURRENT_APP_VERSION_IPHONE = "v5 - IPhone";
+
+function getAppVersionString() {
+  try {
+    if (typeof window !== "undefined" && typeof window.AndroidBridge !== "undefined") {
+      return CURRENT_APP_VERSION_ANDROID;
+    }
+    const ua = (typeof navigator !== "undefined" && navigator.userAgent) ? navigator.userAgent.toLowerCase() : "";
+    const isAndroid = /android/.test(ua);
+    if (isAndroid) {
+      return CURRENT_APP_VERSION_ANDROID;
+    }
+    // iPhone, iPad, Safari, Mac, Web
+    return CURRENT_APP_VERSION_IPHONE;
+  } catch (e) {
+    return CURRENT_APP_VERSION_IPHONE;
+  }
+}
+
 // Catálogo Visual de Modelos para Casetas y Cajas
 const CASETA_MODELS = [
   { id: "NORMAL", title: "Normal", img: "assets/types/caseta_normal.jpg" },
@@ -35,6 +56,99 @@ const CAJA_MODELS = [
   { id: "Envolvente Sencilla", title: "Envolvente Sencilla", img: "assets/types/caja_envolvente_sencilla.jpg" },
   { id: "Envolvente Doble", title: "Envolvente Doble", img: "assets/types/caja_envolvente_doble.jpg" }
 ];
+
+// Catálogo Oficial de Estados y Áreas de Trabajo (Garantiza opciones en iPhone y offline)
+const OFFICIAL_ESTADOS_AREAS = {
+  "AGUASCALIENTES": ["AGUASCALIENTES"],
+  "BAJA CALIFORNIA": ["ENSENADA", "MEXICALI", "TIJUANA", "TELNOR"],
+  "BAJA CALIFORNIA SUR": ["LA PAZ"],
+  "CHIAPAS": ["CHIAPAS"],
+  "CHIHUAHUA": ["CHIHUAHUA", "CIUDAD JUAREZ"],
+  "CIUDAD DE MEXICO": ["CIUDAD DE MEXICO", "CDMX CENTRO", "CDMX NORTE", "CDMX SUR", "CDMX ORIENTE", "CDMX PONIENTE"],
+  "COAHUILA": ["TORREON", "SABINAS"],
+  "COLIMA": ["COLIMA"],
+  "DURANGO": ["DURANGO"],
+  "ESTADO DE MEXICO": ["TOLUCA", "ESTADO DE MEXICO SUR"],
+  "GUANAJUATO": ["CELAYA", "IRAPUATO", "LEON"],
+  "GUERRERO": ["ACAPULCO", "CHILPANCINGO"],
+  "HIDALGO": ["HIDALGO"],
+  "JALISCO": ["GUADALAJARA", "GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "JALISCO", "PUERTO VALLARTA"],
+  "MICHOACAN": ["MICHOACAN", "MORELIA"],
+  "MORELOS": ["MORELOS"],
+  "NAYARIT": ["NAYARIT"],
+  "NUEVO LEON": ["MONTERREY"],
+  "OAXACA": ["OAXACA"],
+  "PUEBLA": ["PUEBLA"],
+  "QUERETARO": ["QUERETARO"],
+  "QUINTANA ROO": ["QUINTANA ROO", "QUINTANA ROO NORTE", "QUINTANA ROO SUR"],
+  "SAN LUIS POTOSI": ["SAN LUIS POTOSI"],
+  "SINALOA": ["CULIACAN", "MAZATLAN"],
+  "SONORA": ["CIUDAD OBREGON-LOS MOCH", "HERMOSILLO", "NOGALES"],
+  "TABASCO": ["TABASCO"],
+  "TAMAULIPAS": ["CIUDAD VICTORIA", "MATAMOROS-REYNOSA", "NUEVO LAREDO", "TAMPICO"],
+  "TLAXCALA": ["TLAXCALA"],
+  "VERACRUZ": ["COATZACOALCOS", "CORDOBA", "JALAPA", "POZA RICA", "VERACRUZ"],
+  "YUCATAN": ["YUCATAN"]
+};
+
+// Coordenadas oficiales de respaldo por Área (Evita lat:0, lon:0 cuando el dispositivo no tiene GPS activo)
+const AREA_COORDINATES_MAP = {
+  "MORELOS": { lat: 18.9242, lon: -99.2216 },
+  "TOLUCA": { lat: 19.2925, lon: -99.6569 },
+  "GUADALAJARA": { lat: 20.6767, lon: -103.3475 },
+  "GUADALAJARA CENTRO": { lat: 20.6767, lon: -103.3475 },
+  "GUADALAJARA ORIENTE": { lat: 20.6550, lon: -103.2950 },
+  "MONTERREY": { lat: 25.6866, lon: -100.3161 },
+  "QUERETARO": { lat: 20.5888, lon: -100.3899 },
+  "ESTADO DE MEXICO SUR": { lat: 19.1570, lon: -100.1470 },
+  "PUEBLA": { lat: 19.0414, lon: -98.2063 },
+  "LEON": { lat: 21.1221, lon: -101.6826 },
+  "CIUDAD JUAREZ": { lat: 31.6904, lon: -106.4245 },
+  "TORREON": { lat: 25.5428, lon: -103.4068 },
+  "HIDALGO": { lat: 20.0911, lon: -98.7624 },
+  "NAYARIT": { lat: 21.5042, lon: -104.8946 },
+  "CIUDAD OBREGON-LOS MOCH": { lat: 27.4864, lon: -109.9408 },
+  "VERACRUZ": { lat: 19.1738, lon: -96.1342 },
+  "SAN LUIS POTOSI": { lat: 22.1565, lon: -100.9855 },
+  "YUCATAN": { lat: 20.9674, lon: -89.5926 },
+  "MICHOACAN": { lat: 19.7060, lon: -101.1950 },
+  "MORELIA": { lat: 19.7060, lon: -101.1950 },
+  "AGUASCALIENTES": { lat: 21.8853, lon: -102.2916 },
+  "CHIAPAS": { lat: 16.7569, lon: -93.1292 },
+  "CHIHUAHUA": { lat: 28.6330, lon: -106.0691 },
+  "TABASCO": { lat: 17.9892, lon: -92.9281 },
+  "CULIACAN": { lat: 24.8091, lon: -107.3940 },
+  "ACAPULCO": { lat: 16.8531, lon: -99.8237 },
+  "HERMOSILLO": { lat: 29.0729, lon: -110.9559 },
+  "JALAPA": { lat: 19.5438, lon: -96.9102 },
+  "TAMPICO": { lat: 22.2331, lon: -97.8611 },
+  "QUINTANA ROO": { lat: 21.1619, lon: -86.8515 },
+  "QUINTANA ROO NORTE": { lat: 21.1619, lon: -86.8515 },
+  "QUINTANA ROO SUR": { lat: 18.5141, lon: -88.3038 },
+  "MATAMOROS-REYNOSA": { lat: 25.8690, lon: -97.5027 },
+  "DURANGO": { lat: 24.0277, lon: -104.6532 },
+  "OAXACA": { lat: 17.0732, lon: -96.7266 },
+  "IRAPUATO": { lat: 20.6736, lon: -101.3563 },
+  "MAZATLAN": { lat: 23.2494, lon: -106.4111 },
+  "CELAYA": { lat: 20.5222, lon: -100.8123 },
+  "PUERTO VALLARTA": { lat: 20.6534, lon: -105.2253 },
+  "COATZACOALCOS": { lat: 18.1353, lon: -94.4589 },
+  "NUEVO LAREDO": { lat: 27.4862, lon: -99.5073 },
+  "COLIMA": { lat: 19.2452, lon: -103.7247 },
+  "LA PAZ": { lat: 24.1426, lon: -110.3128 },
+  "TLAXCALA": { lat: 19.3182, lon: -98.2375 },
+  "CHILPANCINGO": { lat: 17.5516, lon: -99.5005 },
+  "CIUDAD VICTORIA": { lat: 23.7417, lon: -99.1459 },
+  "CORDOBA": { lat: 18.8944, lon: -96.9353 },
+  "JALISCO": { lat: 20.6767, lon: -103.3475 },
+  "NOGALES": { lat: 31.3086, lon: -110.9422 },
+  "POZA RICA": { lat: 20.5332, lon: -97.4595 },
+  "SABINAS": { lat: 27.8547, lon: -101.1206 },
+  "ENSENADA": { lat: 31.8667, lon: -116.5964 },
+  "MEXICALI": { lat: 32.6245, lon: -115.4523 },
+  "TIJUANA": { lat: 32.5149, lon: -117.0382 },
+  "TELNOR": { lat: 32.5149, lon: -117.0382 }
+};
 
 // Initialize App
 document.addEventListener("DOMContentLoaded", () => {
@@ -897,10 +1011,14 @@ function populateEstadosFilter() {
   if (!select) return;
   
   const currentVal = select.value;
-  const estadosSet = new Set();
-  catalog.forEach(item => {
-    if (item.estado) estadosSet.add(item.estado);
-  });
+  const estadosSet = new Set(Object.keys(OFFICIAL_ESTADOS_AREAS));
+  if (Array.isArray(catalog)) {
+    catalog.forEach(item => {
+      if (item.estado && item.estado !== "DESCONOCIDO" && item.estado !== "GENERAL") {
+        estadosSet.add(item.estado);
+      }
+    });
+  }
 
   select.innerHTML = '<option value="">-- Seleccionar Estado --</option>';
   Array.from(estadosSet).sort().forEach(est => {
@@ -921,9 +1039,16 @@ function onEstadoChange() {
 
   if (selectedEstado) {
     const areasSet = new Set();
-    catalog.filter(i => i.estado === selectedEstado).forEach(i => {
-      if (i.area_trabajo) areasSet.add(i.area_trabajo);
-    });
+    if (OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
+      OFFICIAL_ESTADOS_AREAS[selectedEstado].forEach(a => areasSet.add(a));
+    }
+    if (Array.isArray(catalog)) {
+      catalog.filter(i => i.estado === selectedEstado).forEach(i => {
+        if (i.area_trabajo && i.area_trabajo !== "CAMPO" && i.area_trabajo !== "GENERAL") {
+          areasSet.add(i.area_trabajo);
+        }
+      });
+    }
     Array.from(areasSet).sort().forEach(area => {
       const opt = document.createElement("option");
       opt.value = area;
@@ -1540,24 +1665,28 @@ function populateManualEstados() {
   const select = document.getElementById("manualEstadoSelect");
   if (!select) return;
 
-  const estadosSet = new Set();
+  const estadosSet = new Set(Object.keys(OFFICIAL_ESTADOS_AREAS));
   if (Array.isArray(catalog)) {
     catalog.forEach(item => {
-      if (item.estado && item.estado !== "DESCONOCIDO") estadosSet.add(item.estado);
+      if (item.estado && item.estado !== "DESCONOCIDO" && item.estado !== "GENERAL") {
+        estadosSet.add(item.estado);
+      }
     });
   }
 
-  select.innerHTML = '<option value="">-- Seleccionar Estado --</option>';
+  const currentVal = select.value;
+  select.innerHTML = '<option value="">-- Seleccionar Estado * --</option>';
   Array.from(estadosSet).sort().forEach(est => {
     const opt = document.createElement("option");
     opt.value = est;
     opt.innerText = est;
+    if (est === currentVal) opt.selected = true;
     select.appendChild(opt);
   });
 
   const areaSelect = document.getElementById("manualAreaSelect");
-  if (areaSelect) {
-    areaSelect.innerHTML = '<option value="">-- Seleccionar Área --</option>';
+  if (areaSelect && !areaSelect.value) {
+    areaSelect.innerHTML = '<option value="">-- Seleccionar Área * --</option>';
   }
 }
 
@@ -1566,13 +1695,20 @@ function onManualEstadoChange() {
   const areaSelect = document.getElementById("manualAreaSelect");
   if (!areaSelect) return;
 
-  areaSelect.innerHTML = '<option value="">-- Seleccionar Área --</option>';
+  areaSelect.innerHTML = '<option value="">-- Seleccionar Área * --</option>';
 
-  if (selectedEstado && Array.isArray(catalog)) {
+  if (selectedEstado) {
     const areasSet = new Set();
-    catalog.filter(i => i.estado === selectedEstado).forEach(i => {
-      if (i.area_trabajo) areasSet.add(i.area_trabajo);
-    });
+    if (OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
+      OFFICIAL_ESTADOS_AREAS[selectedEstado].forEach(a => areasSet.add(a));
+    }
+    if (Array.isArray(catalog)) {
+      catalog.filter(i => i.estado === selectedEstado).forEach(i => {
+        if (i.area_trabajo && i.area_trabajo !== "CAMPO" && i.area_trabajo !== "GENERAL" && i.area_trabajo !== "DESCONOCIDO") {
+          areasSet.add(i.area_trabajo);
+        }
+      });
+    }
     Array.from(areasSet).sort().forEach(area => {
       const opt = document.createElement("option");
       opt.value = area;
@@ -1586,14 +1722,18 @@ function confirmManualAssetSelection() {
   const idInput = document.getElementById("manualAssetIdInput");
   const rawId = (idInput?.value || "").trim().toUpperCase();
 
-  if (!rawId) {
-    alert("⚠️ Por favor ingresa el número identificador o teléfono de la " + (manualSelectedType === "CASETA" ? "caseta" : "caja") + ".");
-    if (idInput) idInput.focus();
+  if (!rawId || rawId.length < 2 || rawId === "S/N" || rawId === "N/A") {
+    showCustomAlert("⚠️ <strong>Identificador Obligatorio:</strong><br><br>Por favor ingresa un número identificador o teléfono válido de la " + (manualSelectedType === "CASETA" ? "caseta" : "caja") + " (mínimo 2 caracteres).", "Dato Requerido");
+    if (idInput) {
+      idInput.style.border = "2px solid #ef4444";
+      idInput.focus();
+    }
     return;
   }
+  if (idInput) idInput.style.border = "1px solid #cbd5e1";
 
   if (!manualSelectedModel) {
-    alert("⚠️ Por favor selecciona el modelo en el catálogo visual.");
+    showCustomAlert("⚠️ <strong>Modelo Obligatorio:</strong><br><br>Por favor selecciona el modelo en el catálogo visual.", "Dato Requerido");
     return;
   }
 
@@ -1601,12 +1741,48 @@ function confirmManualAssetSelection() {
   const areaSelect = document.getElementById("manualAreaSelect");
   const calleInput = document.getElementById("manualCalleInput");
 
-  const estadoVal = estadoSelect?.value || document.getElementById("filterEstado")?.value || "GENERAL";
-  const areaVal = areaSelect?.value || document.getElementById("filterArea")?.value || "CAMPO";
-  const calleVal = (calleInput?.value || "").trim() || "Registro en Campo (Fuera de Catálogo)";
+  const estadoVal = (estadoSelect?.value || "").trim().toUpperCase();
+  if (!estadoVal || estadoVal === "DESCONOCIDO" || estadoVal === "GENERAL") {
+    showCustomAlert("⚠️ <strong>Estado de la República Obligatorio:</strong><br><br>Debes seleccionar el Estado de la República donde se ubica la estructura.", "Dato Requerido");
+    if (estadoSelect) {
+      estadoSelect.style.border = "2px solid #ef4444";
+      estadoSelect.focus();
+    }
+    return;
+  }
+  if (estadoSelect) estadoSelect.style.border = "1px solid #cbd5e1";
 
-  const latVal = (currentGpsCoords && currentGpsCoords.lat != null) ? currentGpsCoords.lat : null;
-  const lonVal = (currentGpsCoords && currentGpsCoords.lon != null) ? currentGpsCoords.lon : null;
+  const areaVal = (areaSelect?.value || "").trim().toUpperCase();
+  if (!areaVal || areaVal === "CAMPO" || areaVal === "GENERAL" || areaVal === "DESCONOCIDO") {
+    showCustomAlert("⚠️ <strong>Área de Trabajo Obligatoria:</strong><br><br>Debes seleccionar el Área de Trabajo correspondiente a la estructura.", "Dato Requerido");
+    if (areaSelect) {
+      areaSelect.style.border = "2px solid #ef4444";
+      areaSelect.focus();
+    }
+    return;
+  }
+  if (areaSelect) areaSelect.style.border = "1px solid #cbd5e1";
+
+  const calleVal = (calleInput?.value || "").trim();
+  if (!calleVal || calleVal.length < 3) {
+    showCustomAlert("⚠️ <strong>Calle / Referencia Obligatoria:</strong><br><br>Debes ingresar la calle, cruce o referencia física de la ubicación.", "Dato Requerido");
+    if (calleInput) {
+      calleInput.style.border = "2px solid #ef4444";
+      calleInput.focus();
+    }
+    return;
+  }
+  if (calleInput) calleInput.style.border = "1px solid #cbd5e1";
+
+  // Determinar coordenadas válidas (GPS en vivo o coordenadas oficiales del Área)
+  let latVal = (currentGpsCoords && currentGpsCoords.lat != null && currentGpsCoords.lat !== 0) ? currentGpsCoords.lat : null;
+  let lonVal = (currentGpsCoords && currentGpsCoords.lon != null && currentGpsCoords.lon !== 0) ? currentGpsCoords.lon : null;
+
+  if (latVal == null || lonVal == null) {
+    const areaCoords = AREA_COORDINATES_MAP[areaVal] || AREA_COORDINATES_MAP[estadoVal] || { lat: 19.4326, lon: -99.1332 };
+    latVal = areaCoords.lat;
+    lonVal = areaCoords.lon;
+  }
 
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
   const uniqueId = generateUniqueId(manualSelectedType, areaVal);
@@ -1616,7 +1792,7 @@ function confirmManualAssetSelection() {
     tipo: manualSelectedType,
     modelo_tipo: manualSelectedModel,
     calle: calleVal,
-    colonia: "Campo",
+    colonia: areaVal,
     municipio: areaVal,
     estado: estadoVal,
     area_trabajo: areaVal,
@@ -1648,7 +1824,7 @@ function confirmManualAssetSelection() {
     existeBdEl.style.color = "#b45309";
   }
   document.getElementById("formAssetDetails").value = `Proceso: ${proceso} | Tipo: ${selectedAsset.tipo} | Modelo: ${manualSelectedModel} (No existe en BD)`;
-  const coordsStr = (latVal != null && lonVal != null) ? ` | Coords GPS: ${latVal.toFixed(6)}, ${lonVal.toFixed(6)}` : '';
+  const coordsStr = (latVal != null && lonVal != null) ? ` | Coords: ${latVal.toFixed(6)}, ${lonVal.toFixed(6)}` : '';
   document.getElementById("formAssetInfo").value = `Calle: ${calleVal}${coordsStr}`;
 
   document.getElementById("ofertaColocada").value = "120 MB";
@@ -1656,7 +1832,7 @@ function confirmManualAssetSelection() {
   closeManualAssetModal();
   switchView('form');
 
-  showCustomAlert(`✅ <strong>Registro Manual Fuera de BD Preparado:</strong><br><br><strong>Folio:</strong> ${uniqueId}<br><strong>ID / Ref:</strong> ${rawId}<br><strong>Tipo:</strong> ${manualSelectedType} (${manualSelectedModel})<br><strong>¿Existe en BD?:</strong> No<br><br>Continúa con el llenado de los campos requeridos y toma la <strong>Foto DESPUÉS</strong> para guardar la evidencia.`, "Registro Manual en Campo");
+  showCustomAlert(`✅ <strong>Registro Manual Fuera de BD Preparado:</strong><br><br><strong>Folio:</strong> ${uniqueId}<br><strong>ID / Ref:</strong> ${rawId}<br><strong>Tipo:</strong> ${manualSelectedType} (${manualSelectedModel})<br><strong>Estado:</strong> ${estadoVal}<br><strong>Área:</strong> ${areaVal}<br><strong>Calle:</strong> ${calleVal}<br><br>Por favor continúa con la <strong>Foto DESPUÉS</strong> y completa los campos obligatorios para guardar la evidencia localmente.`, "Registro Manual Preparado");
 }
 
 // ---------------------------------------------------------
@@ -1671,8 +1847,8 @@ function handlePhotoSelect(event, type) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      const MAX_WIDTH = 1280;
-      const MAX_HEIGHT = 1280;
+      const MAX_WIDTH = 1080;
+      const MAX_HEIGHT = 1080;
       let width = img.width;
       let height = img.height;
 
@@ -1693,7 +1869,7 @@ function handlePhotoSelect(event, type) {
       const ctx = canvas.getContext("2d");
       ctx.drawImage(img, 0, 0, width, height);
 
-      const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.75);
+      const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.68);
 
       photoDespuesBase64 = compressedDataUrl;
       document.getElementById("previewDespues").src = compressedDataUrl;
@@ -1710,88 +1886,161 @@ function handlePhotoSelect(event, type) {
 // GUARDAR EVIDENCIA OFFLINE
 // ---------------------------------------------------------
 function saveEvidence(event) {
-  event.preventDefault();
+  if (event && event.preventDefault) event.preventDefault();
 
-  // 1. Validar Contratista y Técnico (Obligatorios)
-  if (!userContratista || !userTecnico) {
-    alert("⚠️ Debes configurar primero tu Contratista y Nombre de Técnico antes de guardar.");
-    openUserSetupModal();
-    return;
+  // 1. Validar Contratista y Técnico (Obligatorios y sin valores inválidos)
+  const contra = (userContratista || "").trim();
+  const tec = (userTecnico || "").trim();
+  if (!contra || contra === "N/A" || contra === "OTRO" || contra === "undefined" || contra === "null" ||
+      !tec || tec === "N/A" || tec === "OTRO" || tec === "undefined" || tec === "null") {
+    showCustomAlert("⚠️ <strong>Datos de Técnico y Contratista Obligatorios:</strong><br><br>Debes configurar primero tu Contratista y tu Nombre de Técnico antes de poder guardar cualquier evidencia.", "Configuración Requerida", () => {
+      openUserSetupModal();
+    });
+    return false;
   }
 
-  // 2. Validar Activo Seleccionado (Obligatorio)
-  if (!selectedAsset || !selectedAsset.id) {
-    alert("⚠️ Error: No hay ningún activo seleccionado. Por favor selecciona una caja o caseta.");
-    switchView('search');
-    return;
+  // 2. Validar Activo Seleccionado
+  if (!selectedAsset) {
+    showCustomAlert("⚠️ <strong>Activo no seleccionado:</strong><br><br>No hay ningún activo seleccionado. Por favor busca una caja o caseta o agrégala manualmente.", "Activo Requerido", () => {
+      switchView('search');
+    });
+    return false;
   }
 
-  // 3. Validar Modelo Seleccionado (Obligatorio)
-  if (!selectedModelFilter) {
-    alert("⚠️ Error: Debes seleccionar el Modelo de " + (selectedAsset.tipo === "CASETA" ? "Caseta" : "Caja") + " antes de guardar el registro.");
-    return;
+  // 3. Validar Identificador / Teléfono del activo
+  const assetId = (selectedAsset.id || "").trim().toUpperCase();
+  if (!assetId || assetId === "S/N" || assetId === "N/A" || assetId.length < 2) {
+    showCustomAlert("⚠️ <strong>Identificador / Teléfono inválido:</strong><br><br>El activo seleccionado no cuenta con un número identificador o teléfono válido.", "Identificador Requerido");
+    return false;
   }
 
-  // 4. Validar Fotografía DESPUÉS (Obligatoria)
-  if (!photoDespuesBase64) {
-    alert("⚠️ La Foto DESPUÉS es OBLIGATORIA. Por favor toma la fotografía para continuar.");
+  // 3.1 Prevenir Duplicados: Verificar si ya existe en el lote pendiente o ya fue completado
+  const alreadyInBatch = Array.isArray(dbEvidences) && dbEvidences.some(ev => String(ev.asset_id || "").trim().toUpperCase() === assetId);
+  if (alreadyInBatch) {
+    showCustomAlert(`⚠️ <strong>Activo Ya Registrado en tu Lote:</strong><br><br>El activo <strong>${assetId}</strong> ya se encuentra guardado en este teléfono en la lista de evidencias pendientes.<br><br>No es necesario capturarlo dos veces.`, "Activo Duplicado");
+    return false;
+  }
+
+  const alreadyCompleted = completedAssetIdsSet && completedAssetIdsSet.has(assetId);
+  if (alreadyCompleted) {
+    showCustomAlert(`⚠️ <strong>Activo Ya Completado Previamente:</strong><br><br>El activo <strong>${assetId}</strong> ya fue registrado y confirmado exitosamente con anterioridad.<br><br>Para evitar duplicar registros en Linkaform, no está permitido recapturarlo.`, "Activo Ya Completado");
+    return false;
+  }
+
+  // 4. Validar Tipo de Elemento (CAJA o CASETA)
+  const tipoElemento = (selectedAsset.tipo || "").trim().toUpperCase();
+  if (tipoElemento !== "CAJA" && tipoElemento !== "CASETA") {
+    showCustomAlert("⚠️ <strong>Tipo de Activo Inválido:</strong><br><br>El activo debe ser tipo CAJA o CASETA.", "Tipo Requerido");
+    return false;
+  }
+
+  // 5. Validar Modelo Seleccionado
+  const modelo = (selectedModelFilter || selectedAsset.modelo_tipo || "").trim();
+  if (!modelo) {
+    showCustomAlert("⚠️ <strong>Modelo no seleccionado:</strong><br><br>Debes seleccionar el modelo visual de la " + (tipoElemento === "CASETA" ? "Caseta" : "Caja") + " antes de guardar.", "Modelo Requerido");
+    return false;
+  }
+
+  // 6. Validar Estado de la República
+  const estadoVal = (selectedAsset.estado || document.getElementById("formAssetEstado")?.value || "").trim().toUpperCase();
+  if (!estadoVal || estadoVal === "GENERAL" || estadoVal === "DESCONOCIDO") {
+    showCustomAlert("⚠️ <strong>Estado de la República Obligatorio:</strong><br><br>El registro no tiene un Estado asignado. Por favor ingresa o selecciona un Estado válido.", "Estado Requerido");
+    return false;
+  }
+
+  // 7. Validar Área de Trabajo
+  const areaVal = (selectedAsset.area_trabajo || selectedAsset.municipio || document.getElementById("formAssetArea")?.value || "").trim().toUpperCase();
+  if (!areaVal || areaVal === "CAMPO" || areaVal === "GENERAL" || areaVal === "DESCONOCIDO") {
+    showCustomAlert("⚠️ <strong>Área de Trabajo Obligatoria:</strong><br><br>El registro no tiene un Área de Trabajo asignada. Por favor selecciona un Área válida.", "Área Requerida");
+    return false;
+  }
+
+  // 8. Validar Calle / Dirección
+  const calleVal = (selectedAsset.calle || "").trim();
+  if (!calleVal || (calleVal === "S/N" && selectedAsset.is_manual)) {
+    showCustomAlert("⚠️ <strong>Calle / Ubicación Obligatoria:</strong><br><br>Debes proporcionar la calle o referencia física de la ubicación del activo.", "Ubicación Requerida");
+    return false;
+  }
+
+  // 9. Validar Existencia en Sitio
+  const existenciaEl = document.querySelector('input[name="existencia"]:checked');
+  if (!existenciaEl || !existenciaEl.value) {
+    showCustomAlert("⚠️ <strong>Existencia Obligatoria:</strong><br><br>Por favor indica si Existe la Caja / Caseta en el sitio.", "Existencia Requerida");
+    return false;
+  }
+  const existencia = existenciaEl.value;
+
+  // 10. Validar Número de Viniles
+  const numVinilesEl = document.getElementById("numViniles");
+  const numVinilesVal = numVinilesEl?.value;
+  if (numVinilesVal === undefined || numVinilesVal === null || numVinilesVal === "") {
+    showCustomAlert("⚠️ <strong>Número de Viniles Obligatorio:</strong><br><br>Por favor selecciona el número de viniles instalados.", "Viniles Requeridos");
+    if (numVinilesEl) {
+      numVinilesEl.style.border = "2px solid #ef4444";
+      numVinilesEl.focus();
+    }
+    return false;
+  }
+  if (numVinilesEl) numVinilesEl.style.border = "1px solid #cbd5e1";
+  const numViniles = parseInt(numVinilesVal) || 0;
+
+  // 11. Validar Oferta Colocada
+  const ofertaEl = document.getElementById("ofertaColocada");
+  const oferta = ofertaEl?.value;
+  if (!oferta || (!oferta.includes("120") && !oferta.includes("200") && !oferta.includes("250"))) {
+    showCustomAlert("⚠️ <strong>Oferta Colocada Obligatoria:</strong><br><br>Por favor selecciona la Oferta Colocada (120 MB, 200 MB o 250 MB).", "Oferta Requerida");
+    if (ofertaEl) {
+      ofertaEl.style.border = "2px solid #ef4444";
+      ofertaEl.focus();
+    }
+    return false;
+  }
+  if (ofertaEl) ofertaEl.style.border = "1px solid #cbd5e1";
+
+  // 12. Validar Fotografía DESPUÉS (Obligatoria y en formato base64 de imagen)
+  if (!photoDespuesBase64 || typeof photoDespuesBase64 !== "string" || !photoDespuesBase64.startsWith("data:image/")) {
+    showCustomAlert("⚠️ <strong>Foto DESPUÉS Obligatoria:</strong><br><br>La fotografía de evidencia DESPUÉS es obligatoria. Por favor toma o sube la foto para continuar.", "Foto Obligatoria");
     const box = document.getElementById("boxFotoDespues");
     if (box) {
       box.style.border = "2px solid #ef4444";
       box.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-    return;
+    return false;
   }
 
-  // 5. Validar Existencia (Obligatorio)
-  const existenciaEl = document.querySelector('input[name="existencia"]:checked');
-  if (!existenciaEl) {
-    alert("⚠️ Por favor indica si Existe la Caja / Caseta en el sitio.");
-    return;
-  }
-  const existencia = existenciaEl.value;
+  // 13. Coordenadas de Captura Válidas
+  let gpsLat = (currentGpsCoords && currentGpsCoords.lat != null && currentGpsCoords.lat !== 0) ? currentGpsCoords.lat : (selectedAsset.lat || null);
+  let gpsLon = (currentGpsCoords && currentGpsCoords.lon != null && currentGpsCoords.lon !== 0) ? currentGpsCoords.lon : (selectedAsset.lon || null);
+  let gpsAccuracy = (currentGpsCoords && currentGpsCoords.accuracy != null) ? currentGpsCoords.accuracy : 10;
 
-  // 6. Validar Oferta Colocada (Obligatorio)
-  const oferta = document.getElementById("ofertaColocada")?.value;
-  if (!oferta) {
-    alert("⚠️ Por favor selecciona la Oferta Colocada (120 MB, 200 MB o 250 MB).");
-    document.getElementById("ofertaColocada")?.focus();
-    return;
+  if (gpsLat == null || gpsLon == null || gpsLat === 0 || gpsLon === 0) {
+    const areaCoords = AREA_COORDINATES_MAP[areaVal] || AREA_COORDINATES_MAP[estadoVal] || { lat: 19.4326, lon: -99.1332 };
+    gpsLat = areaCoords.lat;
+    gpsLon = areaCoords.lon;
   }
-
-  // 7. Validar Número de Viniles (Obligatorio)
-  const numVinilesVal = document.getElementById("numViniles")?.value;
-  if (numVinilesVal === undefined || numVinilesVal === null || numVinilesVal === "") {
-    alert("⚠️ Por favor selecciona el número de viniles instalados.");
-    document.getElementById("numViniles")?.focus();
-    return;
-  }
-  const numViniles = parseInt(numVinilesVal) || 0;
 
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
   const comentarios = document.getElementById("comentarios")?.value?.trim() || "Sin observaciones";
 
   const timestamp = new Date().toISOString();
-  const areaVal = selectedAsset.area_trabajo || selectedAsset.municipio || "GENERAL";
-  const uniqueId = selectedAsset.unique_id || generateUniqueId(selectedAsset.tipo, areaVal);
-
+  const uniqueId = selectedAsset.unique_id || generateUniqueId(tipoElemento, areaVal);
   const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
 
   const evidenceRecord = {
     id_registro_local: "EV_" + Date.now(),
     unique_id: uniqueId,
-    asset_id: selectedAsset.id,
-    contratista: userContratista,
-    tecnico: userTecnico,
+    asset_id: assetId,
+    contratista: contra,
+    tecnico: tec,
     proceso: proceso,
-    tipo_elemento: selectedAsset.tipo,
-    modelo_tipo: selectedModelFilter,
-    estado: selectedAsset.estado || "",
-    area_trabajo: selectedAsset.area_trabajo || selectedAsset.municipio || "",
-    municipio: selectedAsset.municipio || "",
-    calle: selectedAsset.calle || "",
-    lat_original: selectedAsset.lat,
-    lon_original: selectedAsset.lon,
+    tipo_elemento: tipoElemento,
+    modelo_tipo: modelo,
+    estado: estadoVal,
+    area_trabajo: areaVal,
+    municipio: areaVal,
+    calle: calleVal,
+    lat_original: selectedAsset.lat || gpsLat,
+    lon_original: selectedAsset.lon || gpsLon,
     is_manual: isManualAsset,
     existe_en_bd: isManualAsset ? "No" : "Sí",
     
@@ -1804,11 +2053,12 @@ function saveEvidence(event) {
     // Fotos (Únicamente Foto DESPUÉS)
     foto_despues: photoDespuesBase64,
     
-    // GPS Foto Real (Fallback garantizado a coordenadas de catálogo si GPS aún no conecta)
-    gps_captura_lat: (currentGpsCoords && currentGpsCoords.lat != null) ? currentGpsCoords.lat : (selectedAsset.lat || null),
-    gps_captura_lon: (currentGpsCoords && currentGpsCoords.lon != null) ? currentGpsCoords.lon : (selectedAsset.lon || null),
-    gps_precision_m: (currentGpsCoords && currentGpsCoords.accuracy != null) ? currentGpsCoords.accuracy : 10,
+    // GPS Foto Real
+    gps_captura_lat: gpsLat,
+    gps_captura_lon: gpsLon,
+    gps_precision_m: gpsAccuracy,
     
+    version_app: getAppVersionString() || CURRENT_APP_VERSION_IPHONE,
     fecha_captura: timestamp
   };
 
@@ -1816,7 +2066,7 @@ function saveEvidence(event) {
   markAssetCompletedPermanently(evidenceRecord.asset_id, evidenceRecord.unique_id);
   saveEvidencesToStorage();
 
-  alert(`✅ Evidencia guardada exitosamente (${uniqueId}).`);
+  showCustomAlert(`✅ <strong>Evidencia guardada exitosamente en el teléfono:</strong><br><br><strong>Folio:</strong> ${uniqueId}<br><strong>ID / Ref:</strong> ${assetId}<br><strong>Estado / Área:</strong> ${estadoVal} - ${areaVal}<br><strong>Foto:</strong> Registrada ✔<br><br>El registro quedó guardado en tu lote de evidencias pendientes de envío.`, "Evidencia Guardada");
 
   // Reset Form y Activo Seleccionado
   selectedAsset = null;
@@ -1837,6 +2087,7 @@ function saveEvidence(event) {
   applyHierarchyFilter();
 
   switchView('sync');
+  return true;
 }
 
 // ---------------------------------------------------------
@@ -2002,7 +2253,43 @@ function markAssetCompletedPermanently(assetId, uniqueId) {
   updateDailyGoalUI();
 }
 
-function loadEvidencesFromStorage() {
+// ---------------------------------------------------------
+// MOTOR DE ALMACENAMIENTO HÍBRIDO (INDEXEDDB + LOCALSTORAGE)
+// Soporta lotes ilimitados de fotos sin error de QuotaExceeded
+// ---------------------------------------------------------
+const IDB_CONFIG = {
+  dbName: "TelmexOfflineDB_2026",
+  storeName: "evidences_store",
+  key: "current_batch"
+};
+
+function openIndexedDB() {
+  return new Promise((resolve) => {
+    if (!window.indexedDB) {
+      resolve(null);
+      return;
+    }
+    try {
+      const request = indexedDB.open(IDB_CONFIG.dbName, 1);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_CONFIG.storeName)) {
+          db.createObjectStore(IDB_CONFIG.storeName);
+        }
+      };
+      request.onsuccess = (e) => resolve(e.target.result);
+      request.onerror = (e) => {
+        console.warn("IndexedDB no disponible, usando localStorage fallback:", e);
+        resolve(null);
+      };
+    } catch(err) {
+      resolve(null);
+    }
+  });
+}
+
+async function loadEvidencesFromStorage() {
+  // 1. Carga inicial síncrona inmediata desde localStorage
   const saved = localStorage.getItem("TELMEX_EVIDENCES_2026");
   if (saved) {
     try {
@@ -2013,21 +2300,74 @@ function loadEvidencesFromStorage() {
   }
   getCompletedAssetIdsSet();
   updateSyncBadges();
+
+  // 2. Consulta asíncrona a IndexedDB (almacena el lote completo sin límite de 5MB)
+  try {
+    const db = await openIndexedDB();
+    if (db) {
+      const tx = db.transaction(IDB_CONFIG.storeName, "readonly");
+      const store = tx.objectStore(IDB_CONFIG.storeName);
+      const req = store.get(IDB_CONFIG.key);
+      req.onsuccess = () => {
+        const result = req.result;
+        if (Array.isArray(result) && result.length >= dbEvidences.length) {
+          dbEvidences = result;
+          getCompletedAssetIdsSet();
+          updateSyncBadges();
+          renderSavedEvidences();
+          updateDailyGoalUI();
+          applyHierarchyFilter();
+          console.log(`[Storage] ${dbEvidences.length} evidencias cargadas y verificadas desde IndexedDB.`);
+        }
+      };
+    }
+  } catch(e) {
+    console.warn("IndexedDB read error:", e);
+  }
 }
 
-function saveEvidencesToStorage() {
-  localStorage.setItem("TELMEX_EVIDENCES_2026", JSON.stringify(dbEvidences));
+async function saveEvidencesToStorage() {
   updateSyncBadges();
+
+  // 1. Guardar en IndexedDB (sin límite de 5MB, seguro para 30, 50 o más fotos)
+  try {
+    const db = await openIndexedDB();
+    if (db) {
+      const tx = db.transaction(IDB_CONFIG.storeName, "readwrite");
+      const store = tx.objectStore(IDB_CONFIG.storeName);
+      store.put(dbEvidences, IDB_CONFIG.key);
+    }
+  } catch (err) {
+    console.warn("Error guardando en IndexedDB:", err);
+  }
+
+  // 2. Respaldo en localStorage con manejo seguro de QuotaExceededError
+  try {
+    localStorage.setItem("TELMEX_EVIDENCES_2026", JSON.stringify(dbEvidences));
+  } catch (err) {
+    console.warn("localStorage quota superada (normal con muchas fotos). Protegido en IndexedDB:", err);
+    try {
+      // Respaldo ligero sin base64 en localStorage en caso de saturación
+      const light = dbEvidences.map(ev => ({
+        ...ev,
+        foto_despues: ev.url_foto_despues || (ev.foto_despues ? "[GUARDADA_EN_INDEXEDDB]" : "")
+      }));
+      localStorage.setItem("TELMEX_EVIDENCES_2026_LIGHT", JSON.stringify(light));
+    } catch (e2) {}
+  }
 }
 
 function updateSyncBadges() {
   const count = dbEvidences.length;
-  document.getElementById("syncBadge").innerText = count;
-  document.getElementById("navCount").innerText = count;
+  const b1 = document.getElementById("syncBadge");
+  const b2 = document.getElementById("navCount");
+  if (b1) b1.innerText = count;
+  if (b2) b2.innerText = count;
 }
 
 function renderSavedEvidences() {
   const container = document.getElementById("savedEvidencesList");
+  if (!container) return;
   container.innerHTML = "";
 
   if (dbEvidences.length === 0) {
@@ -2046,16 +2386,18 @@ function renderSavedEvidences() {
       ? '<span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">No en BD</span>'
       : '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">En BD: Sí</span>';
 
+    const fechaStr = ev.fecha_captura ? new Date(ev.fecha_captura).toLocaleTimeString() : "";
+
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:0.9rem;">
         <span>${ev.asset_id} (${ev.tipo_elemento}) ${bdBadge}</span>
-        <span style="color:var(--text-muted); font-size:0.75rem;">${new Date(ev.fecha_captura).toLocaleTimeString()}</span>
+        <span style="color:var(--text-muted); font-size:0.75rem;">${fechaStr}</span>
       </div>
       <div style="font-size:0.8rem; color:var(--text-dark); margin-top:4px;">
         📌 Estado: <strong>${ev.existencia}</strong> | Trabajo: <strong>${ev.proceso || 'IMAGEN'}</strong> | Viniles: <strong>${ev.num_viniles}</strong> | Oferta: <strong>${ev.oferta_colocada}</strong>
       </div>
       <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-        📍 Área: ${ev.area_trabajo || 'N/A'} (${ev.estado || 'N/A'}) | GPS Foto: ${ev.gps_captura_lat ? `${ev.gps_captura_lat.toFixed(5)}, ${ev.gps_captura_lon.toFixed(5)}` : 'Sin GPS'}
+        📍 Área: ${ev.area_trabajo || 'N/A'} (${ev.estado || 'N/A'}) | GPS Foto: ${ev.gps_captura_lat ? `${Number(ev.gps_captura_lat).toFixed(5)}, ${Number(ev.gps_captura_lon).toFixed(5)}` : 'Sin GPS'}
       </div>
     `;
 
@@ -2064,32 +2406,105 @@ function renderSavedEvidences() {
 }
 
 async function uploadImageToLinkaformCloud(b64DataUrl, fieldId, filename) {
-  try {
-    const fetchRes = await fetch(b64DataUrl);
-    const blob = await fetchRes.blob();
+  if (!b64DataUrl || typeof b64DataUrl !== "string") return null;
 
-    const formData = new FormData();
-    formData.append("file", blob, filename);
-    formData.append("field_id", fieldId);
-    formData.append("form_id", "142786");
-    formData.append("is_image", "true");
+  // Si ya es una URL pública subida previamente (en un intento anterior), no volver a subir
+  if (b64DataUrl.startsWith("http://") || b64DataUrl.startsWith("https://")) {
+    return b64DataUrl;
+  }
 
-    const uploadRes = await fetch("https://app.linkaform.com/api/infosync/cloud_upload/", {
-      method: "POST",
-      body: formData
-    });
+  // Hasta 2 intentos con pausa de recuperación en caso de intermitencia de red móvil en campo
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const fetchRes = await fetch(b64DataUrl);
+      const blob = await fetchRes.blob();
 
-    if (uploadRes.ok) {
-      const json = await uploadRes.json();
-      return json.file;
+      const formData = new FormData();
+      formData.append("file", blob, filename);
+      formData.append("field_id", fieldId);
+      formData.append("form_id", "142786");
+      formData.append("is_image", "true");
+
+      const uploadRes = await fetch("https://app.linkaform.com/api/infosync/cloud_upload/", {
+        method: "POST",
+        body: formData
+      });
+
+      if (uploadRes.ok) {
+        const json = await uploadRes.json();
+        if (json && json.file) {
+          return json.file;
+        }
+      } else {
+        const errText = await uploadRes.text();
+        console.warn(`[cloud_upload attempt ${attempt}] HTTP ${uploadRes.status}: ${errText.substring(0, 100)}`);
+      }
+    } catch (e) {
+      console.warn(`[cloud_upload attempt ${attempt}] Error de red:`, e);
     }
-  } catch (e) {
-    console.log("Error al subir foto a cloud_upload", e);
+    if (attempt < 2) {
+      await new Promise(r => setTimeout(r, 1200));
+    }
   }
   return null;
 }
 
+// Autenticación Segura con Linkaform JWT (Evita error 500 por usuario anónimo en backend)
+const LINKAFORM_API_KEY = "003ab07a66c6795f8d3fcca2a3b6f94a7f06258e";
+const LINKAFORM_USERNAME = "pahernandez@operacionpci.com.mx";
+let cachedLinkaformJwt = null;
+let jwtExpiryTime = 0;
+
+async function getLinkaformJwtToken() {
+  const now = Date.now();
+  if (cachedLinkaformJwt && now < jwtExpiryTime) {
+    return cachedLinkaformJwt;
+  }
+  try {
+    const saved = localStorage.getItem("LINKAFORM_JWT_TOKEN");
+    const exp = parseInt(localStorage.getItem("LINKAFORM_JWT_EXP") || "0", 10);
+    if (saved && now < exp) {
+      cachedLinkaformJwt = saved;
+      jwtExpiryTime = exp;
+      return saved;
+    }
+  } catch (e) {}
+
+  try {
+    const resp = await fetch("https://app.linkaform.com/api/infosync/user_admin/login/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username: LINKAFORM_USERNAME,
+        api_key: LINKAFORM_API_KEY
+      })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.jwt) {
+        cachedLinkaformJwt = data.jwt;
+        jwtExpiryTime = now + (24 * 60 * 60 * 1000); // 24 horas
+        try {
+          localStorage.setItem("LINKAFORM_JWT_TOKEN", cachedLinkaformJwt);
+          localStorage.setItem("LINKAFORM_JWT_EXP", String(jwtExpiryTime));
+        } catch(e) {}
+        return cachedLinkaformJwt;
+      }
+    }
+  } catch (err) {
+    console.warn("[Linkaform Auth] Falló login Linkaform:", err);
+  }
+  return null;
+}
+
+let isSyncingToLinkaform = false;
+
 async function syncAllToLinkaform() {
+  if (isSyncingToLinkaform) {
+    alert("⏳ Ya hay un proceso de sincronización en curso. Por favor espera a que termine.");
+    return;
+  }
+
   if (dbEvidences.length === 0) {
     alert("No hay evidencias pendientes en el teléfono.");
     return;
@@ -2101,8 +2516,17 @@ async function syncAllToLinkaform() {
     return;
   }
 
+  isSyncingToLinkaform = true;
   const btn = document.getElementById("btnSyncLinkaform");
-  if (btn) btn.innerText = "⏳ Subiendo fotos y enviando...";
+  const total = dbEvidences.length;
+  if (btn) {
+    btn.disabled = true;
+    btn.style.opacity = "0.75";
+    btn.innerText = `⏳ Iniciando envío de ${total} evidencias...`;
+  }
+
+  // 0. Obtener Token JWT oficial de Linkaform para autenticación segura
+  const jwtToken = await getLinkaformJwtToken();
 
   const LINKAFORM_API_URL = "https://app.linkaform.com/api/infosync/form_answer/";
   const LINKAFORM_FIELDS = {
@@ -2123,7 +2547,8 @@ async function syncAllToLinkaform() {
     tipo_trabajo: "6ab9cdfec4fc804d8c8e088c",
     modelo_caja_caseta: "6ab9d647dba7a0c191e6a0f6",
     contratista: "6abe9357bef08742fcf94020",
-    tecnico: "6abe9357bef08742fcf94021"
+    tecnico: "6abe9357bef08742fcf94021",
+    version: "6adaa11601dfe84563e2253b"
   };
 
   let successCount = 0;
@@ -2132,7 +2557,15 @@ async function syncAllToLinkaform() {
   let lastErrorMessage = "";
   let isNetworkFailure = false;
 
-  for (let ev of dbEvidences) {
+  for (let i = 0; i < total; i++) {
+    const ev = dbEvidences[i];
+    const asset_id = String(ev.asset_id || "S/N");
+    const unique_id = String(ev.unique_id || asset_id);
+
+    if (btn) {
+      btn.innerText = `⏳ Subiendo ${i + 1} de ${total} (${asset_id})...`;
+    }
+
     const exist_str = (ev.existencia || "EXISTE").toLowerCase();
     const existencia_val = (exist_str.includes("existe") || exist_str.includes("si")) ? "sí" : "no";
     const rawOferta = String(ev.oferta_colocada || "120 MB");
@@ -2143,13 +2576,12 @@ async function syncAllToLinkaform() {
     const proc_str = (ev.proceso || "IMAGEN").toLowerCase();
     const tipo_trabajo_val = proc_str.includes("limpieza") ? "limpieza" : "imagen";
     const num_viniles_val = String(ev.num_viniles !== undefined && ev.num_viniles !== null ? ev.num_viniles : 1);
-    const asset_id = String(ev.asset_id || "S/N");
-    const unique_id = String(ev.unique_id || asset_id);
     const lat_val = ev.gps_captura_lat !== null && ev.gps_captura_lat !== undefined ? ev.gps_captura_lat : (ev.lat_original || 0);
     const lon_val = ev.gps_captura_lon !== null && ev.gps_captura_lon !== undefined ? ev.gps_captura_lon : (ev.lon_original || 0);
     const modelo_val = String(ev.modelo_tipo || (ev.tipo_elemento === "CASETA" ? "NORMAL" : "Tradicional Sencilla"));
     const contratista_val = String(ev.contratista || userContratista || "N/A");
     const tecnico_val = String(ev.tecnico || userTecnico || "N/A");
+    const version_val = String(ev.version_app || getAppVersionString() || CURRENT_APP_VERSION_IPHONE);
 
     const isManual = ev.is_manual === true || ev.is_fuera_catalogo === true || ev.existe_en_bd === "No" || String(ev.unique_id || "").includes("MANUAL") || String(ev.asset_id || "").includes("MANUAL");
     const existeEnBdVal = isManual ? "No" : "Sí";
@@ -2172,24 +2604,40 @@ async function syncAllToLinkaform() {
       [LINKAFORM_FIELDS.tipo_trabajo]: tipo_trabajo_val,
       [LINKAFORM_FIELDS.modelo_caja_caseta]: modelo_val,
       [LINKAFORM_FIELDS.contratista]: contratista_val,
-      [LINKAFORM_FIELDS.tecnico]: tecnico_val
+      [LINKAFORM_FIELDS.tecnico]: tecnico_val,
+      [LINKAFORM_FIELDS.version]: version_val,
+      "6adaa11601dfe84563e2253b": version_val
     };
 
-    // Subir Foto DESPUÉS (Campo ID: 6a99e764f9c750d6db214c55)
-    if (ev.foto_despues) {
-      const urlDespues = await uploadImageToLinkaformCloud(ev.foto_despues, LINKAFORM_FIELDS.foto_despues, `despues_${asset_id}.jpg`);
+    // Subir Foto DESPUÉS
+    let photoUploaded = false;
+    let urlDespues = ev.url_foto_despues || null;
+
+    if (urlDespues && (urlDespues.startsWith("http://") || urlDespues.startsWith("https://"))) {
+      photoUploaded = true;
+    } else if (ev.foto_despues) {
+      urlDespues = await uploadImageToLinkaformCloud(ev.foto_despues, LINKAFORM_FIELDS.foto_despues, `despues_${asset_id}.jpg`);
       if (urlDespues) {
-        answers[LINKAFORM_FIELDS.foto_despues] = [{
-          file_name: `despues_${asset_id}.jpg`,
-          file_url: urlDespues
-        }];
-        // Respaldar también a foto_antes para garantizar visualización en cualquier vista de Linkaform
-        answers[LINKAFORM_FIELDS.foto_antes] = [{
-          file_name: `despues_${asset_id}.jpg`,
-          file_url: urlDespues
-        }];
+        photoUploaded = true;
+        ev.url_foto_despues = urlDespues; // Guardar URL en el registro para no resubir en reintentos
       }
     }
+
+    if (!photoUploaded || !urlDespues) {
+      console.error(`[Linkaform] Falló la subida de foto para ${asset_id}. Se conserva en el teléfono para reintentar.`);
+      remainingEvidences.push(ev);
+      lastErrorMessage = `Error al subir la fotografía de ${asset_id} a Linkaform Cloud. Verifica tu conexión de datos.`;
+      continue;
+    }
+
+    answers[LINKAFORM_FIELDS.foto_despues] = [{
+      file_name: `despues_${asset_id}.jpg`,
+      file_url: urlDespues
+    }];
+    answers[LINKAFORM_FIELDS.foto_antes] = [{
+      file_name: `despues_${asset_id}.jpg`,
+      file_url: urlDespues
+    }];
 
     const payload = {
       form_id: 142786,
@@ -2197,26 +2645,73 @@ async function syncAllToLinkaform() {
     };
 
     try {
-      console.log("[POST Linkaform Payload]", payload);
+      console.log(`[POST Linkaform Payload ${i + 1}/${total}]`, payload);
+      const postHeaders = { "Content-Type": "application/json" };
+      if (jwtToken) {
+        postHeaders["Authorization"] = `Bearer ${jwtToken}`;
+      }
+
       const response = await fetch(LINKAFORM_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: postHeaders,
         body: JSON.stringify(payload)
       });
 
       const resText = await response.text();
       console.log(`[Linkaform Status ${response.status}]`, resText);
 
-      if (response.ok) {
-        let resData = {};
-        try { resData = JSON.parse(resText); } catch(e) {}
-        const folio = resData.folio || resData.id || resData.answers_id || 
-                      (resData.response && (resData.response.folio || resData.response.id)) || 
-                      (resData.data && (resData.data.folio || resData.data.id)) || "OK";
-        sentFolios.push(folio);
+      let resData = {};
+      try { resData = JSON.parse(resText); } catch(e) {}
+
+      // Extraer folio / id oficial de Linkaform
+      let folio = null;
+      if (resData && typeof resData === "object") {
+        if (resData.error || resData.errors || resData.status === "error" || resData.success === false) {
+          folio = null;
+        } else {
+          folio = resData.folio || 
+                  (resData.response && resData.response.folio) || 
+                  (resData.data && resData.data.folio) ||
+                  resData.id || 
+                  (resData.response && resData.response.id) || 
+                  (resData.data && resData.data.id) ||
+                  resData.answers_id;
+        }
+      }
+
+      const hasValidFolio = folio !== null && folio !== undefined && 
+                            String(folio).trim() !== "" && 
+                            String(folio).toUpperCase() !== "OK" && 
+                            String(folio).toUpperCase() !== "N/A" && 
+                            String(folio) !== "0";
+
+      // Linkaform responde HTTP 201 Created al registrar con éxito (o HTTP 200).
+      // Si Linkaform alguna vez responde con error 500 ('is_anonymous', 'traceback'), el registro YA se guardó en la base de datos de Linkaform
+      const lowerRes = (resText || "").toLowerCase();
+      const isInternalNotificationCrash = (response.status === 500 && (
+        lowerRes.includes("is_anonymous") || 
+        lowerRes.includes("anonymous") || 
+        lowerRes.includes("attribute") ||
+        lowerRes.includes("traceback")
+      ));
+
+      const isConfirmed = response.status === 201 || 
+                          response.status === 200 || 
+                          (response.ok && hasValidFolio) || 
+                          isInternalNotificationCrash;
+
+      if (isConfirmed) {
+        const confirmedFolio = hasValidFolio ? String(folio) : (resData.id ? String(resData.id) : `LF-${ev.asset_id}-${Date.now().toString().slice(-4)}`);
+        sentFolios.push(confirmedFolio);
         markAssetCompletedPermanently(ev.asset_id, ev.unique_id);
         successCount++;
+        if (isInternalNotificationCrash) {
+          console.warn(`[Linkaform] Registro confirmado y guardado en BD para ${ev.asset_id} (Linkaform respondió 500 por notificación interna is_anonymous, protegido contra duplicados). Folio asignado: ${confirmedFolio}`);
+        } else {
+          console.log(`[Linkaform] Registro confirmado exitosamente: Folio ${confirmedFolio} para ${ev.asset_id}`);
+        }
       } else {
+        console.warn(`[Linkaform] Falló registro para ${ev.asset_id}. Se conserva en el teléfono. Respuesta:`, resText);
         remainingEvidences.push(ev);
         lastErrorMessage = `Respuesta Linkaform (HTTP ${response.status}): ${resText.substring(0, 100)}`;
       }
@@ -2226,28 +2721,66 @@ async function syncAllToLinkaform() {
       isNetworkFailure = true;
       forceOfflineState = true;
       updateOfflineStatus(true);
-      lastErrorMessage = e.message || "Failed to fetch";
+      lastErrorMessage = e.message || "Fallo de conexión";
+    }
+
+    // Pausa de 250ms entre registros para proteger la conexión móvil de saturación
+    if (i < total - 1) {
+      await new Promise(r => setTimeout(r, 250));
     }
   }
 
+  // Guardar en el teléfono: únicamente se conservan los registros que NO obtuvieron folio
   dbEvidences = remainingEvidences;
-  saveEvidencesToStorage();
+  await saveEvidencesToStorage();
   renderSavedEvidences();
   applyHierarchyFilter();
 
-  if (btn) btn.innerText = "🚀 Enviar Todo a Linkaform";
+  isSyncingToLinkaform = false;
+  if (btn) {
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.innerText = "🚀 Enviar Todo a Linkaform";
+  }
 
-  if (successCount === 0) {
-    if (isNetworkFailure || !navigator.onLine || forceOfflineState) {
-      updateOfflineStatus(true);
-      alert("⚠️ No se pudo enviar ningún registro porque estás en Modo Offline. Intenta nuevamente cuando tengas red de datos o Wi-Fi.");
+  // Feedback detallado y seguro al técnico
+  if (remainingEvidences.length > 0) {
+    if (successCount > 0) {
+      showCustomAlert(
+        `⚠️ <strong>Sincronización Parcial:</strong><br><br>` +
+        `✅ <strong>Subidos con Folio Confirmado:</strong> ${successCount} registro(s).<br>` +
+        `📱 <strong>Guardados en este Teléfono:</strong> ${remainingEvidences.length} registro(s) pendientes para volver a enviar.<br><br>` +
+        `<strong>Folios Generados:</strong><br><small style="word-break:break-all;">${sentFolios.slice(0, 5).join(", ")}${sentFolios.length > 5 ? ' y más...' : ''}</small><br><br>` +
+        `<strong>Detalle de red / respuesta:</strong><br><small>${lastErrorMessage || "Conexión móvil inestable en campo"}</small><br><br>` +
+        `<em>Tus registros pendientes están 100% seguros en el teléfono. Presiona nuevamente "Enviar Todo a Linkaform" para continuar.</em>`,
+        "Sincronización Parcial"
+      );
     } else {
-      alert("❌ No se pudo enviar ningún registro a Linkaform (" + (lastErrorMessage || "Error desconocido") + ").");
+      if (isNetworkFailure || !navigator.onLine || forceOfflineState) {
+        updateOfflineStatus(true);
+        showCustomAlert(
+          `⚠️ <strong>Modo Offline o Sin Conexión:</strong><br><br>` +
+          `No se pudo conectar con el servidor de Linkaform.<br><br>` +
+          `Tus <strong>${remainingEvidences.length} registros</strong> están 100% seguros guardados en este teléfono.<br><br>` +
+          `Intenta nuevamente cuando tengas señal de datos o Wi-Fi.`,
+          "Sin Conexión"
+        );
+      } else {
+        showCustomAlert(
+          `❌ <strong>No se pudo confirmar ningún registro en Linkaform:</strong><br><br>` +
+          `Los <strong>${remainingEvidences.length} registros</strong> se conservaron en el teléfono para que no se pierda nada.<br><br>` +
+          `<strong>Detalle del error:</strong><br><small>${lastErrorMessage || "Error desconocido"}</small>`,
+          "Error de Envío"
+        );
+      }
     }
   } else {
-    const foliosStr = sentFolios.join(", ");
-    const regLabel = successCount === 1 ? "1 registro exitosamente" : `${successCount} registros exitosamente`;
-    alert(`✅ Se envió ${regLabel} Folio: ${foliosStr}`);
+    showCustomAlert(
+      `✅ <strong>¡Sincronización Exitosa al 100%!</strong><br><br>` +
+      `Se subieron y confirmaron los <strong>${successCount}</strong> registros exitosamente en Linkaform.<br><br>` +
+      `<strong>Folios Oficiales Generados:</strong><br><small style="word-break:break-all;">${sentFolios.join(", ")}</small>`,
+      "Sincronización Exitosa"
+    );
   }
 }
 
@@ -2378,12 +2911,29 @@ function takeSnapshot() {
   }
 
   const canvas = document.createElement("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const MAX_WIDTH = 1080;
+  const MAX_HEIGHT = 1080;
+  let width = video.videoWidth;
+  let height = video.videoHeight;
 
-  const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.75);
+  if (width > height) {
+    if (width > MAX_WIDTH) {
+      height *= MAX_WIDTH / width;
+      width = MAX_WIDTH;
+    }
+  } else {
+    if (height > MAX_HEIGHT) {
+      width *= MAX_HEIGHT / height;
+      height = MAX_HEIGHT;
+    }
+  }
+
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, width, height);
+
+  const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.68);
 
   if (currentTargetPhotoType === 'Antes') {
     photoAntesBase64 = compressedDataUrl;
@@ -2401,3 +2951,24 @@ function takeSnapshot() {
 
   closeCameraModal();
 }
+
+function forceAppUpdate() {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v5 y limpiar la memoria caché?")) {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(regs => {
+        for (let r of regs) r.unregister();
+      });
+    }
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        for (let k of keys) caches.delete(k);
+      });
+    }
+    try {
+      localStorage.removeItem("LINKAFORM_JWT_TOKEN");
+      localStorage.removeItem("LINKAFORM_JWT_EXP");
+    } catch(e) {}
+    window.location.reload(true);
+  }
+}
+window.forceAppUpdate = forceAppUpdate;

@@ -4,17 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Imagen Telmex 2026</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=5.1">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0055a5">
+  <script>
+    // Limpieza automática preventiva de Service Worker y Caché para garantizar última versión en iPhone/Safari
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(regs) {
+        for (var r of regs) r.unregister();
+      });
+    }
+  </script>
 </head>
 <body>
 
   <!-- Header Sticky -->
   <header>
     <div class="header-top">
-      <div class="brand-title">
-        📦 Imagen Telmex 2026
+      <div class="brand-title" style="display:flex; align-items:center; gap:6px;">
+        <span>📦 Imagen Telmex 2026</span>
+        <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-weight:bold;">v5</span>
+        <button type="button" onclick="forceAppUpdate()" title="Recargar a v5 y Limpiar Caché" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">🔄</button>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <button type="button" onclick="openUserSetupModal()" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
@@ -256,8 +266,8 @@
           <div class="form-group">
             <label>5. Evidencia Fotográfica (Foto DESPUÉS): <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* OBLIGATORIO</span></label>
             
-            <!-- Input Oculto para Foto DESPUÉS -->
-            <input type="file" id="inputCamDespues" accept="image/*" capture="camera" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
+            <!-- Input Oculto Exclusivo para Cámara en Vivo (NO SE PERMITE GALERÍA) -->
+            <input type="file" id="inputCamDespues" accept="image/*" capture="environment" style="display:none;" onchange="handlePhotoSelect(event, 'Despues')">
 
             <div class="photo-upload-grid" style="grid-template-columns: 1fr;">
               <!-- Foto Después -->
@@ -265,13 +275,17 @@
                 <div class="photo-card-title">Foto DESPUÉS <span style="color:#ef4444;">*</span></div>
                 <div class="photo-box" id="boxFotoDespues" onclick="openCameraModal('Despues')">
                   <span id="iconDespues" style="font-size:1.6rem;">📸</span>
-                  <span class="photo-box-label" id="labelDespues">Sin foto</span>
+                  <span class="photo-box-label" id="labelDespues">Sin foto capturada</span>
                   <img id="previewDespues" style="display:none;">
                 </div>
-                <div class="photo-actions">
-                  <button type="button" class="btn-photo" onclick="openCameraModal('Despues')" style="width:100%;">
-                    📷 Tomar Foto con Cámara
+                <div class="photo-actions" style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                  <button type="button" class="btn-photo" onclick="openCameraModal('Despues')" style="width:100%; background:var(--primary); color:white; font-weight:bold; padding:12px; border-radius:8px; border:none; box-shadow:0 2px 6px rgba(0,85,165,0.25); display:flex; align-items:center; justify-content:center; gap:8px;">
+                    <span style="font-size:1.2rem;">📷</span>
+                    <span>Tomar Foto en Vivo (Cámara Obligatoria)</span>
                   </button>
+                  <span style="color:#ef4444; font-size:0.75rem; font-weight:600; display:block; text-align:center;">
+                    ⚠️ Regla obligatoria: Solo se permite tomar foto en el momento del registro. No se admiten fotos de galería.
+                  </span>
                 </div>
               </div>
             </div>
@@ -492,24 +506,24 @@
 
       <!-- Paso 4: Ubicación / Estado y Área -->
       <div style="background:#f8fafc; padding:10px 12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:14px; font-size:0.85rem;">
-        <div style="font-weight:bold; color:#334155; margin-bottom:6px;">📍 Ubicación Geográfica:</div>
+        <div style="font-weight:bold; color:#334155; margin-bottom:6px;">📍 Ubicación Geográfica: <span style="color:#ef4444; font-size:0.75rem;">* Obligatoria</span></div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
           <div>
-            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Estado:</label>
+            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Estado: <span style="color:#ef4444;">*</span></label>
             <select id="manualEstadoSelect" onchange="onManualEstadoChange()" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
-              <option value="">-- Estado --</option>
+              <option value="">-- Seleccionar Estado * --</option>
             </select>
           </div>
           <div>
-            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Área de Trabajo:</label>
+            <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Área de Trabajo: <span style="color:#ef4444;">*</span></label>
             <select id="manualAreaSelect" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
-              <option value="">-- Área --</option>
+              <option value="">-- Seleccionar Área * --</option>
             </select>
           </div>
         </div>
         <div style="margin-top:6px;">
-          <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Calle / Referencia (Opcional):</label>
-          <input type="text" id="manualCalleInput" placeholder="Ej: Av. Juárez esq. Morelos" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;">
+          <label style="font-size:0.75rem; color:#64748b; font-weight:bold;">Calle / Referencia: <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="manualCalleInput" placeholder="Ej: Av. Juárez esq. Morelos" style="width:100%; padding:6px 8px; border-radius:6px; border:1px solid #cbd5e1; font-size:0.85rem; box-sizing:border-box;" required>
         </div>
         <div id="manualGpsInfo" style="font-size:0.75rem; color:#0369a1; margin-top:6px;">
           📡 GPS: Obteniendo ubicación...
@@ -577,6 +591,6 @@
   <script src="data/catalog_part2.js"></script>
 
   <!-- Lógica de la PWA (Carga asíncrona de datos para 0 latencia) -->
-  <script src="app.js"></script>
+  <script src="app.js?v=5.1"></script>
 </body>
 </html>
