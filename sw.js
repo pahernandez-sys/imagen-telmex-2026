@@ -1,5 +1,5 @@
-// Service Worker de Limpieza y Neutralización de Caché v5.1
-const CACHE_NAME = "telmex-pwa-cache-v51-clean";
+// Service Worker de Limpieza y Neutralización de Caché v6.0
+const CACHE_NAME = "telmex-pwa-cache-v60-clean";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();

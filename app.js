@@ -16,8 +16,8 @@ let userContratista = "";
 let userTecnico = "";
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
-const CURRENT_APP_VERSION_ANDROID = "v5 - Android";
-const CURRENT_APP_VERSION_IPHONE = "v5 - IPhone";
+const CURRENT_APP_VERSION_ANDROID = "v6 - Android";
+const CURRENT_APP_VERSION_IPHONE = "v6 - IPhone";
 
 function getAppVersionString() {
   try {
@@ -182,6 +182,44 @@ function closeCustomAlert() {
     const cb = customAlertCallback;
     customAlertCallback = null;
     cb();
+  }
+}
+
+let customConfirmResolve = null;
+
+function showCustomConfirm(message, title = "Imagen Telmex 2026", onConfirm = null, onCancel = null, okText = "Aceptar", cancelText = "Cancelar", okColor = "#dc2626") {
+  const modal = document.getElementById("customConfirmModal");
+  const msgEl = document.getElementById("customConfirmMessage");
+  const titleEl = document.getElementById("customConfirmHeader");
+  const okBtn = document.getElementById("customConfirmOkBtn");
+  const cancelBtn = document.getElementById("customConfirmCancelBtn");
+
+  if (modal && msgEl && okBtn && cancelBtn) {
+    if (titleEl) titleEl.innerHTML = `<span>${title}</span>`;
+    msgEl.innerHTML = String(message).replace(/\n/g, "<br>");
+    okBtn.innerHTML = okText;
+    okBtn.style.backgroundColor = okColor;
+    cancelBtn.innerHTML = cancelText;
+    modal.style.display = "flex";
+
+    customConfirmResolve = (confirmed) => {
+      modal.style.display = "none";
+      if (confirmed && onConfirm) onConfirm();
+      else if (!confirmed && onCancel) onCancel();
+    };
+  } else {
+    const plainMsg = String(message).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+    const ok = confirm(plainMsg);
+    if (ok && onConfirm) onConfirm();
+    else if (!ok && onCancel) onCancel();
+  }
+}
+
+function closeCustomConfirm(confirmed) {
+  if (customConfirmResolve) {
+    const cb = customConfirmResolve;
+    customConfirmResolve = null;
+    cb(confirmed);
   }
 }
 
@@ -2379,18 +2417,23 @@ function renderSavedEvidences() {
     const card = document.createElement("div");
     card.className = "card";
     card.style.marginBottom = "10px";
-    card.style.borderLeft = "4px solid var(--primary)";
+    card.style.borderLeft = (ev.omitir_sync || ev.is_duplicate_linkaform) ? "4px solid #ef4444" : "4px solid var(--primary)";
 
     const isManualEv = ev.is_manual === true || ev.is_fuera_catalogo === true || ev.existe_en_bd === "No" || String(ev.unique_id || "").includes("MANUAL") || String(ev.asset_id || "").includes("MANUAL");
     const bdBadge = isManualEv 
       ? '<span style="background:#fef3c7; color:#b45309; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">No en BD</span>'
       : '<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold;">En BD: Sí</span>';
 
+    let statusBadge = "";
+    if (ev.omitir_sync || ev.is_duplicate_linkaform) {
+      statusBadge = '<span style="background:#fee2e2; color:#b91c1c; padding:2px 6px; border-radius:4px; font-size:0.7rem; font-weight:bold; margin-left:4px;">⚠️ Ya en Linkaform (Pausado)</span>';
+    }
+
     const fechaStr = ev.fecha_captura ? new Date(ev.fecha_captura).toLocaleTimeString() : "";
 
     card.innerHTML = `
       <div style="display:flex; justify-content:space-between; align-items:center; font-weight:bold; font-size:0.9rem;">
-        <span>${ev.asset_id} (${ev.tipo_elemento}) ${bdBadge}</span>
+        <span>${ev.asset_id} (${ev.tipo_elemento}) ${bdBadge} ${statusBadge}</span>
         <span style="color:var(--text-muted); font-size:0.75rem;">${fechaStr}</span>
       </div>
       <div style="font-size:0.8rem; color:var(--text-dark); margin-top:4px;">
@@ -2399,11 +2442,69 @@ function renderSavedEvidences() {
       <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
         📍 Área: ${ev.area_trabajo || 'N/A'} (${ev.estado || 'N/A'}) | GPS Foto: ${ev.gps_captura_lat ? `${Number(ev.gps_captura_lat).toFixed(5)}, ${Number(ev.gps_captura_lon).toFixed(5)}` : 'Sin GPS'}
       </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; padding-top:8px; border-top:1px dashed #e2e8f0; gap:8px;">
+        ${ev.omitir_sync ? `
+          <button type="button" onclick="toggleOmitirSync(${idx})" style="background:#f1f5f9; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
+            🔄 Reactivar Envío
+          </button>
+        ` : `
+          <button type="button" onclick="toggleOmitirSync(${idx})" style="background:#fff1f2; color:#e11d48; border:1px solid #fecdd3; padding:6px 10px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
+            ⏸️ Pausar Envío
+          </button>
+        `}
+        <button type="button" onclick="deleteEvidencePrompt(${idx})" style="background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; padding:6px 12px; border-radius:6px; font-size:0.8rem; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;">
+          🗑️ Borrar del teléfono
+        </button>
+      </div>
     `;
 
     container.appendChild(card);
   });
 }
+
+function deleteEvidence(idx) {
+  if (idx < 0 || idx >= dbEvidences.length) return;
+  const removed = dbEvidences.splice(idx, 1)[0];
+  saveEvidencesToStorage();
+  renderSavedEvidences();
+  updateSyncBadges();
+  updateDailyGoalUI();
+  applyHierarchyFilter();
+  if (removed && removed.asset_id) {
+    showCustomAlert(`✅ La evidencia del activo <strong>${removed.asset_id}</strong> fue eliminada de este teléfono.`, "Evidencia Eliminada");
+  }
+}
+window.deleteEvidence = deleteEvidence;
+
+function deleteEvidencePrompt(idx) {
+  if (idx < 0 || idx >= dbEvidences.length) return;
+  const ev = dbEvidences[idx];
+  const idStr = ev.asset_id || "este activo";
+  showCustomConfirm(
+    `¿Deseas eliminar permanentemente la evidencia de <strong>${idStr}</strong> de este dispositivo?<br><br><small style="color:#64748b;">Esta acción liberará espacio de almacenamiento en el teléfono y no se intentará enviar.</small>`,
+    "Eliminar Evidencia",
+    () => deleteEvidence(idx),
+    null,
+    "🗑️ Sí, Eliminar",
+    "Cancelar",
+    "#dc2626"
+  );
+}
+window.deleteEvidencePrompt = deleteEvidencePrompt;
+
+function toggleOmitirSync(idx) {
+  if (idx < 0 || idx >= dbEvidences.length) return;
+  const ev = dbEvidences[idx];
+  ev.omitir_sync = !ev.omitir_sync;
+  saveEvidencesToStorage();
+  renderSavedEvidences();
+  if (ev.omitir_sync) {
+    showCustomAlert(`El activo <strong>${ev.asset_id}</strong> quedó pausado y no se enviará en el próximo lote.<br><br><small style="color:#64748b;">Permanecerá en este teléfono como respaldo.</small>`, "Envío Pausado");
+  } else {
+    showCustomAlert(`El activo <strong>${ev.asset_id}</strong> fue reactivado y se enviará en la próxima sincronización.`, "Envío Reactivado");
+  }
+}
+window.toggleOmitirSync = toggleOmitirSync;
 
 async function uploadImageToLinkaformCloud(b64DataUrl, fieldId, filename) {
   if (!b64DataUrl || typeof b64DataUrl !== "string") return null;
@@ -2554,6 +2655,7 @@ async function syncAllToLinkaform() {
   let successCount = 0;
   let sentFolios = [];
   let remainingEvidences = [];
+  let duplicateAssetsDetected = [];
   let lastErrorMessage = "";
   let isNetworkFailure = false;
 
@@ -2561,6 +2663,13 @@ async function syncAllToLinkaform() {
     const ev = dbEvidences[i];
     const asset_id = String(ev.asset_id || "S/N");
     const unique_id = String(ev.unique_id || asset_id);
+
+    // Si el activo fue pausado manualmente o marcado como duplicado previamente, omitir su envío y no bloquear el lote
+    if (ev.omitir_sync) {
+      console.log(`[Linkaform] Omitiendo ${asset_id} por estar pausado/duplicado.`);
+      remainingEvidences.push(ev);
+      continue;
+    }
 
     if (btn) {
       btn.innerText = `⏳ Subiendo ${i + 1} de ${total} (${asset_id})...`;
@@ -2700,6 +2809,18 @@ async function syncAllToLinkaform() {
                           (response.ok && hasValidFolio) || 
                           isInternalNotificationCrash;
 
+      // Detección precisa de rechazo por activo/distrito/teléfono duplicado en Linkaform
+      const isDuplicateInLinkaform = !isConfirmed && (
+        lowerRes.includes("ya existe") || 
+        lowerRes.includes("ya se encuentra") || 
+        lowerRes.includes("duplicad") || 
+        lowerRes.includes("duplicate") || 
+        lowerRes.includes("already exists") || 
+        lowerRes.includes("unique") || 
+        lowerRes.includes("no permite crear") ||
+        (response.status === 400 && (lowerRes.includes("6ad52fc6bc424ea79992eabf") || lowerRes.includes("distrito") || lowerRes.includes("telefono")))
+      );
+
       if (isConfirmed) {
         const confirmedFolio = hasValidFolio ? String(folio) : (resData.id ? String(resData.id) : `LF-${ev.asset_id}-${Date.now().toString().slice(-4)}`);
         sentFolios.push(confirmedFolio);
@@ -2710,6 +2831,14 @@ async function syncAllToLinkaform() {
         } else {
           console.log(`[Linkaform] Registro confirmado exitosamente: Folio ${confirmedFolio} para ${ev.asset_id}`);
         }
+      } else if (isDuplicateInLinkaform) {
+        console.warn(`[Linkaform] Activo ${ev.asset_id} rechazado por regla de duplicados de Linkaform. Se pausa para no bloquear el resto.`);
+        ev.is_duplicate_linkaform = true;
+        ev.omitir_sync = true;
+        duplicateAssetsDetected.push(ev);
+        markAssetCompletedPermanently(ev.asset_id, ev.unique_id);
+        remainingEvidences.push(ev);
+        lastErrorMessage = `El activo ${ev.asset_id} ya existe registrado en Linkaform.`;
       } else {
         console.warn(`[Linkaform] Falló registro para ${ev.asset_id}. Se conserva en el teléfono. Respuesta:`, resText);
         remainingEvidences.push(ev);
@@ -2743,8 +2872,38 @@ async function syncAllToLinkaform() {
     btn.innerText = "🚀 Enviar Todo a Linkaform";
   }
 
-  // Feedback detallado y seguro al técnico
-  if (remainingEvidences.length > 0) {
+  // Si se detectaron duplicados en Linkaform, advertir al técnico y ofrecer eliminar o conservar pausado
+  if (duplicateAssetsDetected.length > 0) {
+    const dupListStr = duplicateAssetsDetected.map(d => d.asset_id).join(", ");
+    const plural = duplicateAssetsDetected.length > 1;
+    showCustomConfirm(
+      `⚠️ <strong>Distrito o Teléfono Ya Registrado en Linkaform:</strong><br><br>` +
+      `El activo <strong>${dupListStr}</strong> ya se encuentra registrado previamente en Linkaform por otra cuadrilla o en un folio anterior.<br><br>` +
+      (successCount > 0 ? `✅ <strong>Los demás registros válidos (${successCount}) se enviaron y confirmaron con éxito.</strong><br><br>` : '') +
+      `<strong>¿Deseas eliminar ${plural ? 'estos registros' : 'este registro'} de este teléfono?</strong><br><br>` +
+      `• <strong>🗑️ Sí, Eliminar:</strong> Se borrará del teléfono para liberar espacio.<br>` +
+      `• <strong>📁 No, Conservar:</strong> Se quedará en este teléfono como respaldo de fotos, pero pausado para no bloquear futuros envíos.`,
+      "Activo Ya en Linkaform",
+      async () => {
+        const dupIds = new Set(duplicateAssetsDetected.map(d => d.asset_id));
+        dbEvidences = dbEvidences.filter(e => !dupIds.has(e.asset_id));
+        await saveEvidencesToStorage();
+        renderSavedEvidences();
+        updateSyncBadges();
+        updateDailyGoalUI();
+        applyHierarchyFilter();
+        showCustomAlert(`✅ ${plural ? 'Los registros duplicados fueron eliminados' : 'El registro duplicado fue eliminado'} de este teléfono.`, "Eliminado");
+      },
+      async () => {
+        await saveEvidencesToStorage();
+        renderSavedEvidences();
+        showCustomAlert(`ℹ️ Se conservaron en este teléfono pero quedaron pausados. Podrás borrarlos en cualquier momento desde la lista de evidencias.`, "Conservado");
+      },
+      "🗑️ Sí, Eliminar",
+      "📁 No, Conservar",
+      "#dc2626"
+    );
+  } else if (remainingEvidences.length > 0) {
     if (successCount > 0) {
       showCustomAlert(
         `⚠️ <strong>Sincronización Parcial:</strong><br><br>` +
@@ -2953,7 +3112,7 @@ function takeSnapshot() {
 }
 
 function forceAppUpdate() {
-  if (confirm("¿Deseas actualizar la aplicación a la versión v5 y limpiar la memoria caché?")) {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v6 y limpiar la memoria caché?")) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         for (let r of regs) r.unregister();
