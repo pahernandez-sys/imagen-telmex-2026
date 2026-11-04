@@ -16,8 +16,8 @@ let userContratista = "";
 let userTecnico = "";
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
-const CURRENT_APP_VERSION_ANDROID = "v6 - Android";
-const CURRENT_APP_VERSION_IPHONE = "v6 - IPhone";
+const CURRENT_APP_VERSION_ANDROID = "v7 - Android";
+const CURRENT_APP_VERSION_IPHONE = "v7 - IPhone";
 
 function getAppVersionString() {
   try {
@@ -561,6 +561,7 @@ function updateFormUserDisplay() {
 }
 
 function initApp() {
+  populateModelFilter("TODOS");
   checkUserConfig();
   loadEvidencesFromStorage();
   updateDailyGoalUI();
@@ -686,6 +687,7 @@ function loadCatalogViaScript() {
 function onCatalogLoaded() {
   const badge = document.getElementById("catalogCountBadge");
   if (badge) badge.innerText = `${catalog.length.toLocaleString()} registros`;
+  populateModelFilter("TODOS");
   applyHierarchyFilter();
 }
 
@@ -951,6 +953,7 @@ function locateTechnician() {
       const completedAssetIds = getCompletedAssetIdsSet();
       const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
       const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
+      const modelFilter = document.getElementById("filterModeloEspecifico")?.value || "TODOS";
 
       // Calcular distancia Haversine a todos los registros del catálogo no completados
       const results = [];
@@ -960,6 +963,9 @@ function locateTechnician() {
         const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
         if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) continue;
         if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) continue;
+        if (modelFilter !== "TODOS") {
+          if (!matchesModelFilter(item.modelo_tipo, modelFilter, item.tipo)) continue;
+        }
         if (item.lat && item.lon) {
           const dist = haversineDistance(lat, lon, item.lat, item.lon);
           results.push({ ...item, dist_m: dist });
@@ -969,6 +975,13 @@ function locateTechnician() {
       // Ordenar de la más cercana a la más lejana y tomar ÚNICAMENTE las 35 más cercanas
       results.sort((a, b) => a.dist_m - b.dist_m);
       const topNearby = results.slice(0, 35);
+
+      const titleEl = document.getElementById("searchResultsTitle");
+      if (titleEl) {
+        titleEl.innerText = modelFilter !== "TODOS" 
+          ? `📍 35 ${modelFilter.toUpperCase()} Más Cercanas a tu Ubicación` 
+          : "📍 35 Opciones Más Cercanas a tu Ubicación";
+      }
 
       renderSearchResults(topNearby, true, getTodayCompletedCount());
     },
@@ -1022,8 +1035,173 @@ function updateFormGpsDisplay() {
 // FILTROS JERÁRQUICOS Y BÚSQUEDA DIRECTA
 // ---------------------------------------------------------
 
+// ---------------------------------------------------------
+// FILTRO POR MODELO / TIPO ESPECÍFICO (v7)
+// ---------------------------------------------------------
+
+function matchesModelFilter(itemModel, filterModel, itemTipo) {
+  if (!filterModel || filterModel === "TODOS") return true;
+  if (!itemModel) return false;
+  
+  const im = itemModel.trim().toUpperCase();
+  const fm = filterModel.trim().toUpperCase();
+  
+  if (im === fm) return true;
+  
+  // Modelos de Caseta
+  if (fm === "NORMAL" || fm === "CASETA NORMAL") {
+    return im === "NORMAL" || im === "CASETA NORMAL";
+  }
+  if (fm === "MINI" || fm === "CASETA MINI") {
+    return im.includes("MINI");
+  }
+  if (fm.includes("SEMI") || fm.includes("SEMICIRCULAR")) {
+    return im.includes("SEMI");
+  }
+  if (fm.includes("REFORMA") || fm.includes("DOBLE REFORMA")) {
+    return im.includes("REFORMA");
+  }
+  if (fm.includes("CUICUILCO")) {
+    return im.includes("CUICUILCO");
+  }
+  
+  // Modelos de Caja
+  if (fm.includes("TRADICIONAL")) {
+    if (!im.includes("TRADICIONAL")) return false;
+    if (fm.includes("DOBLE")) return im.includes("DOBLE");
+    return im.includes("SENCILLA") || !im.includes("DOBLE");
+  }
+  if (fm.includes("SIECOR")) {
+    if (!im.includes("SIECOR")) return false;
+    if (fm.includes("DOBLE")) return im.includes("DOBLE");
+    if (fm.includes("2") || fm.includes("DOS")) {
+      return im.includes("2") || im.includes("DOS");
+    }
+    if (fm.includes("1") || fm.includes("UNA")) {
+      return im.includes("1") || im.includes("UNA") || (!im.includes("2") && !im.includes("DOBLE"));
+    }
+    return true;
+  }
+  if (fm.includes("KRONE")) {
+    return im.includes("KRONE");
+  }
+  if (fm.includes("ENVOLVENTE") || fm.includes("ENVOLV")) {
+    if (!im.includes("ENVOLV")) return false;
+    if (fm.includes("DOBLE")) return im.includes("DOBLE");
+    return im.includes("SENCILLA") || !im.includes("DOBLE");
+  }
+  if (fm.includes("DESPLAZ") || fm.includes("DEPLAS")) {
+    if (!im.includes("DESPLAZ") && !im.includes("DEPLAS")) return false;
+    if (fm.includes("DOBLE")) return im.includes("DOBLE");
+    return im.includes("SENCILLA") || !im.includes("DOBLE");
+  }
+  
+  return im === fm || im.includes(fm) || fm.includes(im);
+}
+
+function populateModelFilter(tipo) {
+  const select = document.getElementById("filterModeloEspecifico");
+  if (!select) return;
+
+  const prevValue = select.value || "TODOS";
+  select.innerHTML = "";
+
+  if (tipo === "CASETA") {
+    select.innerHTML = `
+      <option value="TODOS">-- Todas las Casetas (Cualquier Modelo) --</option>
+      <option value="NORMAL">📞 Caseta Normal</option>
+      <option value="MINI">📞 Caseta Mini</option>
+      <option value="SEMICIRCULAR">📞 Caseta Semicircular</option>
+      <option value="DOBLE REFORMA">📞 Caseta Doble Reforma</option>
+      <option value="CUICUILCO">📞 Caseta Cuicuilco</option>
+    `;
+  } else if (tipo === "CAJA") {
+    select.innerHTML = `
+      <option value="TODOS">-- Todas las Cajas (Cualquier Modelo) --</option>
+      <option value="Tradicional Sencilla">📦 Tradicional Sencilla</option>
+      <option value="Tradicional Doble">📦 Tradicional Doble</option>
+      <option value="Siecor Sencilla 1 Puerta">📦 Siecor Sencilla 1 Puerta</option>
+      <option value="Siecor Sencilla 2 Puertas">📦 Siecor Sencilla 2 Puertas</option>
+      <option value="Siecor Doble">📦 Siecor Doble</option>
+      <option value="Krone Sencilla">📦 Krone Sencilla</option>
+      <option value="Desplazamiento Sencilla">📦 Desplazamiento Sencilla</option>
+      <option value="Desplazamiento Doble">📦 Desplazamiento Doble</option>
+      <option value="Envolvente Sencilla">📦 Envolvente Sencilla</option>
+      <option value="Envolvente Doble">📦 Envolvente Doble</option>
+    `;
+  } else {
+    select.innerHTML = `
+      <option value="TODOS">-- Todos los Modelos (Cajas y Casetas) --</option>
+      <optgroup label="📦 Cajas (10 Modelos Oficiales)">
+        <option value="Tradicional Sencilla">Tradicional Sencilla</option>
+        <option value="Tradicional Doble">Tradicional Doble</option>
+        <option value="Siecor Sencilla 1 Puerta">Siecor Sencilla 1 Puerta</option>
+        <option value="Siecor Sencilla 2 Puertas">Siecor Sencilla 2 Puertas</option>
+        <option value="Siecor Doble">Siecor Doble</option>
+        <option value="Krone Sencilla">Krone Sencilla</option>
+        <option value="Desplazamiento Sencilla">Desplazamiento Sencilla</option>
+        <option value="Desplazamiento Doble">Desplazamiento Doble</option>
+        <option value="Envolvente Sencilla">Envolvente Sencilla</option>
+        <option value="Envolvente Doble">Envolvente Doble</option>
+      </optgroup>
+      <optgroup label="📞 Casetas (5 Modelos Oficiales)">
+        <option value="NORMAL">Normal</option>
+        <option value="MINI">Mini</option>
+        <option value="SEMICIRCULAR">Semicircular</option>
+        <option value="DOBLE REFORMA">Doble Reforma</option>
+        <option value="CUICUILCO">Cuicuilco</option>
+      </optgroup>
+    `;
+  }
+
+  // Restaurar selección si existe en las nuevas opciones
+  let matchedOpt = Array.from(select.options).some(o => o.value === prevValue);
+  if (matchedOpt) {
+    select.value = prevValue;
+  } else {
+    select.value = "TODOS";
+  }
+  updateActiveModelBadge(select.value);
+}
+
+function onFilterModeloChange() {
+  const select = document.getElementById("filterModeloEspecifico");
+  const val = select ? select.value : "TODOS";
+  updateActiveModelBadge(val);
+
+  if (val !== "TODOS") {
+    const isCaja = CAJA_MODELS.some(m => m.id === val || m.title === val || val.includes("Tradicional") || val.includes("Siecor") || val.includes("Krone") || val.includes("Desplazamiento") || val.includes("Envolvente"));
+    const isCaseta = CASETA_MODELS.some(m => m.id === val || val === "NORMAL" || val === "MINI" || val === "SEMICIRCULAR" || val.includes("REFORMA") || val.includes("CUICUILCO"));
+    
+    const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
+    if (isCaja && elementoRadio && elementoRadio.value === "CASETA") {
+      const rCaja = document.getElementById("elemento_caja");
+      if (rCaja) rCaja.checked = true;
+    } else if (isCaseta && elementoRadio && elementoRadio.value === "CAJA") {
+      const rCas = document.getElementById("elemento_caseta");
+      if (rCas) rCas.checked = true;
+    }
+  }
+
+  applyHierarchyFilter();
+}
+
+function updateActiveModelBadge(val) {
+  const badge = document.getElementById("activeModelBadge");
+  if (!badge) return;
+  if (!val || val === "TODOS") {
+    badge.innerText = "Todos";
+    badge.style.background = "#64748b";
+  } else {
+    badge.innerText = val;
+    badge.style.background = "#16a34a";
+  }
+}
+
 function onElementTypeChange() {
-  selectedModelFilter = "";
+  const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
+  const tipo = elementoRadio ? elementoRadio.value : "TODOS";
+  populateModelFilter(tipo);
   applyHierarchyFilter();
 }
 
@@ -1104,6 +1282,7 @@ function applyHierarchyFilter() {
   
   const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
   const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
+  const modelFilter = document.getElementById("filterModeloEspecifico")?.value || "TODOS";
 
   // Set de IDs ya capturados para evitar duplicados
   const completedAssetIds = getCompletedAssetIdsSet();
@@ -1125,8 +1304,11 @@ function applyHierarchyFilter() {
   let filtered = catalog.filter(item => {
     const itemId = String(item.id || "").trim().toUpperCase();
     const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
-    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false; // Excluir activos ya capturados permanentemente
+    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false;
     if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) return false;
+    if (modelFilter !== "TODOS") {
+      if (!matchesModelFilter(item.modelo_tipo, modelFilter, item.tipo)) return false;
+    }
     if (mode === "MANUAL") {
       if (estadoVal && item.estado !== estadoVal) return false;
       if (areaVal && item.area_trabajo !== areaVal) return false;
@@ -1149,7 +1331,22 @@ function applyHierarchyFilter() {
 
   // Tomar las 35 más cercanas (o hasta 50 en búsqueda manual)
   const maxResults = (mode === "MANUAL" && (estadoVal || areaVal)) ? 50 : 35;
-  renderSearchResults(filtered.slice(0, maxResults), Boolean(currentGpsCoords && currentGpsCoords.lat), getTodayCompletedCount());
+  const topResults = filtered.slice(0, maxResults);
+
+  const titleEl = document.getElementById("searchResultsTitle");
+  if (titleEl) {
+    if (mode === "MANUAL") {
+      titleEl.innerText = modelFilter !== "TODOS" 
+        ? `📋 Activos Filtrados: ${modelFilter.toUpperCase()}` 
+        : "📋 Activos Filtrados por Estado y Área";
+    } else {
+      titleEl.innerText = modelFilter !== "TODOS" 
+        ? `📍 35 ${modelFilter.toUpperCase()} Más Cercanas a tu Ubicación` 
+        : "📍 35 Opciones Más Cercanas a tu Ubicación";
+    }
+  }
+
+  renderSearchResults(topResults, Boolean(currentGpsCoords && currentGpsCoords.lat), getTodayCompletedCount());
 }
 
 function onQueryInput() {
@@ -1161,18 +1358,23 @@ function onQueryInput() {
 
   const elementoRadio = document.querySelector('input[name="filterElemento"]:checked');
   const tipoFilter = elementoRadio ? elementoRadio.value : "TODOS";
+  const modelFilter = document.getElementById("filterModeloEspecifico")?.value || "TODOS";
 
   const completedAssetIds = getCompletedAssetIdsSet();
 
   let matches = catalog.filter(item => {
     const itemId = String(item.id || "").trim().toUpperCase();
     const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
-    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false; // Excluir completados permanentemente
+    if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false;
     if (tipoFilter !== "TODOS" && item.tipo !== tipoFilter) return false;
+    if (modelFilter !== "TODOS") {
+      if (!matchesModelFilter(item.modelo_tipo, modelFilter, item.tipo)) return false;
+    }
     return (item.id && item.id.toUpperCase().includes(q)) || 
            (item.calle && item.calle.toUpperCase().includes(q)) ||
            (item.municipio && item.municipio.toUpperCase().includes(q)) ||
-           (item.area_trabajo && item.area_trabajo.toUpperCase().includes(q));
+           (item.area_trabajo && item.area_trabajo.toUpperCase().includes(q)) ||
+           (item.modelo_tipo && item.modelo_tipo.toUpperCase().includes(q));
   });
 
   if (currentGpsCoords && currentGpsCoords.lat && currentGpsCoords.lon) {
@@ -3112,7 +3314,7 @@ function takeSnapshot() {
 }
 
 function forceAppUpdate() {
-  if (confirm("¿Deseas actualizar la aplicación a la versión v6 y limpiar la memoria caché?")) {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v7 y limpiar la memoria caché?")) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         for (let r of regs) r.unregister();
@@ -3131,3 +3333,6 @@ function forceAppUpdate() {
   }
 }
 window.forceAppUpdate = forceAppUpdate;
+window.onElementTypeChange = onElementTypeChange;
+window.onFilterModeloChange = onFilterModeloChange;
+window.populateModelFilter = populateModelFilter;

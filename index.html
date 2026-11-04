@@ -23,8 +23,8 @@
     <div class="header-top">
       <div class="brand-title" style="display:flex; align-items:center; gap:6px;">
         <span>📦 Imagen Telmex 2026</span>
-        <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-weight:bold;">v6</span>
-        <button type="button" onclick="forceAppUpdate()" title="Recargar a v6 y Limpiar Caché" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">🔄</button>
+        <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-weight:bold;">v7</span>
+        <button type="button" onclick="forceAppUpdate()" title="Recargar a v7 y Limpiar Caché" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">🔄</button>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <button type="button" onclick="openUserSetupModal()" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
@@ -102,21 +102,32 @@
           <label>Paso 2: Tipo de Estructura a Mostrar:</label>
           <div class="radio-group">
             <div class="radio-pill">
-              <input type="radio" id="elemento_todos" name="filterElemento" value="TODOS" checked onchange="applyHierarchyFilter()">
+              <input type="radio" id="elemento_todos" name="filterElemento" value="TODOS" checked onchange="onElementTypeChange()">
               <label for="elemento_todos">🌐 Todas</label>
             </div>
             <div class="radio-pill">
-              <input type="radio" id="elemento_caseta" name="filterElemento" value="CASETA" onchange="applyHierarchyFilter()">
+              <input type="radio" id="elemento_caseta" name="filterElemento" value="CASETA" onchange="onElementTypeChange()">
               <label for="elemento_caseta">📞 Casetas</label>
             </div>
             <div class="radio-pill">
-              <input type="radio" id="elemento_caja" name="filterElemento" value="CAJA" onchange="applyHierarchyFilter()">
+              <input type="radio" id="elemento_caja" name="filterElemento" value="CAJA" onchange="onElementTypeChange()">
               <label for="elemento_caja">📦 Cajas</label>
             </div>
           </div>
         </div>
 
+<!-- Paso 3: Filtro por Modelo Específico (Ej: Tradicional Sencilla, Siecor, Krone...) -->
+        <div class="form-group" style="margin-top: 10px; background: #f0fdf4; padding: 10px 12px; border-radius: 8px; border: 1px solid #bbf7d0;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label for="filterModeloEspecifico" style="color: #166534; font-weight: bold; margin-bottom: 0;">Paso 3: Modelo / Tipo Específico:</label>
+            <span id="activeModelBadge" style="font-size: 0.72rem; font-weight: 700; background: #64748b; color: white; padding: 2px 8px; border-radius: 9999px;">Todos</span>
+          </div>
+          <select id="filterModeloEspecifico" onchange="onFilterModeloChange()" style="width: 100%; padding: 8px 10px; border-radius: 6px; border: 1px solid #86efac; font-size: 0.88rem; font-weight: 600; color: #1e293b; background: white;">
+            <option value="TODOS">-- Todos los Modelos --</option>
+          </select>
+        </div>
 
+        
 
         <!-- Contenedor de Filtros Manuales (Estado y Área de Trabajo) -->
         <div id="manualFilterContainer" style="display: none; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 14px;">
