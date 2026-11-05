@@ -53,6 +53,15 @@
       </div>
     </div>
 
+    <!-- AVISO PRIORITARIO DE CAMPO: PRIMER MENSAJE AL ABRIR LA APP -->
+    <div class="priority-field-alert" style="background: linear-gradient(135deg, #fffbeb, #fef3c7); border: 2px solid #f59e0b; border-radius: 12px; padding: 13px 15px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start; box-shadow: 0 3px 10px rgba(245, 158, 11, 0.22);">
+      <span style="font-size: 1.6rem; line-height: 1; flex-shrink: 0;">⚠️</span>
+      <div style="font-size: 0.88rem; color: #78350f; line-height: 1.45;">
+        <strong style="color: #b45309; font-size: 0.96rem; display: block; margin-bottom: 3px;">⚠️ RECOMENDACIÓN IMPORTANTE DE CAMPO:</strong>
+        Si la caja o caseta no se encuentra exactamente en las coordenadas o punto marcado, <u>valida minuciosamente en las inmediaciones y alrededores</u> si existe físicamente antes de reportarla como inexistente.
+      </div>
+    </div>
+
     <!-- ALERTA DE SELECCION DE ACTIVO -->
     <div id="activeAssetAlert" class="alert alert-info" style="display: none;">
       <strong>Activo Seleccionado:</strong> <span id="activeAssetTitle">Ninguno</span>
@@ -192,6 +201,15 @@
         </div>
 
         <form id="evidenceForm" onsubmit="saveEvidence(event)">
+
+          <!-- AVISO PRIORITARIO AL INICIO DEL FORMULARIO -->
+          <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);">
+            <span style="font-size: 1.4rem; line-height: 1; flex-shrink: 0;">⚠️</span>
+            <div style="font-size: 0.85rem; color: #92400e; line-height: 1.45;">
+              <strong style="color: #b45309; font-size: 0.9rem; display: block; margin-bottom: 2px;">⚠️ Recomendación Importante de Campo:</strong>
+              Si la caja o caseta no se encuentra en las coordenadas exactas del punto, <u>valida minuciosamente en las inmediaciones y alrededores</u> si existe físicamente antes de reportarla como inexistente.
+            </div>
+          </div>
 
           <!-- Datos del activo seleccionado -->
           <div class="form-group">
