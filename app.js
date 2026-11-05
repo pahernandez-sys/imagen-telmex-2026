@@ -16,8 +16,8 @@ let userContratista = "";
 let userTecnico = "";
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
-const CURRENT_APP_VERSION_ANDROID = "v7 - Android";
-const CURRENT_APP_VERSION_IPHONE = "v7 - IPhone";
+const CURRENT_APP_VERSION_ANDROID = "v8 - Android";
+const CURRENT_APP_VERSION_IPHONE = "v8 - IPhone";
 
 function getAppVersionString() {
   try {
@@ -561,6 +561,8 @@ function updateFormUserDisplay() {
 }
 
 function initApp() {
+  setupManualIdInputFilter();
+  setupExistenciaRadioListeners();
   populateModelFilter("TODOS");
   checkUserConfig();
   loadEvidencesFromStorage();
@@ -1782,10 +1784,27 @@ function confirmAssetSelection() {
   if (selectedAsset.oferta_sugerida) {
     const sug = String(selectedAsset.oferta_sugerida).trim();
     if (sug.includes("250")) document.getElementById("ofertaColocada").value = "250 MB";
+    else if (sug.includes("120")) document.getElementById("ofertaColocada").value = "200 MB";
+  const comSel2 = document.getElementById("comentarios");
+  if (comSel2) comSel2.value = "Sin comentarios";
+  const comMan2 = document.getElementById("comentariosManual");
+  if (comMan2) { comMan2.style.display = "none"; comMan2.value = ""; }
     else if (sug.includes("200")) document.getElementById("ofertaColocada").value = "200 MB";
-    else if (sug.includes("120")) document.getElementById("ofertaColocada").value = "120 MB";
     else document.getElementById("ofertaColocada").value = sug;
+  } else {
+    document.getElementById("ofertaColocada").value = "200 MB";
   }
+
+  // Resetear campo de comentarios a 'Sin comentarios' por defecto
+  const comSel1 = document.getElementById("comentarios");
+  if (comSel1) comSel1.value = "Sin comentarios";
+  const comMan1 = document.getElementById("comentariosManual");
+  if (comMan1) { comMan1.style.display = "none"; comMan1.value = ""; }
+
+  // Resetear radios de existencia en V8 para obligar a seleccionar Sí o No
+  document.querySelectorAll('input[name="existencia"]').forEach(r => r.checked = false);
+  const grpExist1 = document.getElementById("groupExistencia");
+  if (grpExist1) { grpExist1.style.border = "none"; grpExist1.style.padding = "0"; }
 
   closeAssetConfirmModal();
   switchView('form');
@@ -1850,6 +1869,49 @@ function closeManualAssetModal() {
   if (modal) modal.style.display = "none";
 }
 
+
+// ---------------------------------------------------------
+// FILTRO EN TIEMPO REAL Y LISTENERS PARA V8
+// ---------------------------------------------------------
+function setupManualIdInputFilter() {
+  const idInput = document.getElementById("manualAssetIdInput");
+  if (!idInput) return;
+  idInput.addEventListener("input", function() {
+    if (manualSelectedType === "CASETA") {
+      this.value = this.value.replace(/\D/g, '').slice(0, 10);
+    } else {
+      this.value = this.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 7);
+    }
+  });
+}
+
+function setupExistenciaRadioListeners() {
+  const existRadios = document.querySelectorAll('input[name="existencia"]');
+  existRadios.forEach(r => {
+    r.addEventListener('change', () => {
+      const groupExist = document.getElementById("groupExistencia");
+      if (groupExist) {
+        groupExist.style.border = "none";
+        groupExist.style.padding = "0";
+      }
+    });
+  });
+}
+
+function onComentariosChange() {
+  const sel = document.getElementById("comentarios");
+  const manual = document.getElementById("comentariosManual");
+  if (!sel || !manual) return;
+  if (sel.value === "OTRO") {
+    manual.style.display = "block";
+    manual.focus();
+  } else {
+    manual.style.display = "none";
+    manual.value = "";
+  }
+}
+window.onComentariosChange = onComentariosChange;
+
 function onManualTipoToggle(tipo) {
   manualSelectedType = (tipo === "CASETA") ? "CASETA" : "CAJA";
 
@@ -1859,15 +1921,25 @@ function onManualTipoToggle(tipo) {
   const catLabel = document.getElementById("manualCatalogLabel");
 
   if (manualSelectedType === "CASETA") {
-    if (idLabel) idLabel.innerHTML = '2. Teléfono / Número de la Caseta: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio</span>';
-    if (idInput) idInput.placeholder = "Ej: 5551234567 o número de caseta...";
-    if (idHelper) idHelper.innerText = "Ingresa el número telefónico o código visible en la caseta física.";
+    if (idLabel) idLabel.innerHTML = '2. Teléfono de la Caseta: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio (10 dígitos)</span>';
+    if (idInput) {
+      idInput.placeholder = "Ej: 9848033711 (10 dígitos numéricos)";
+      idInput.maxLength = 10;
+      idInput.type = "tel";
+      idInput.value = "";
+    }
+    if (idHelper) idHelper.innerHTML = '<span style="color:#0369a1; font-weight:600;">📱 Obligatorio:</span> Debe contener exactamente <strong>10 dígitos numéricos</strong> (ejemplo: 9848033711).';
     if (catLabel) catLabel.innerHTML = '3. Catálogo de Modelos de Casetas: <span style="color:#ef4444; font-size:0.75rem;">* Selecciona una</span>';
     manualSelectedModel = CASETA_MODELS[0].id;
   } else {
-    if (idLabel) idLabel.innerHTML = '2. Identificador / Código de la Caja: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio</span>';
-    if (idInput) idInput.placeholder = "Ej: TLA0012, CJ-NOR-01 o código de caja...";
-    if (idHelper) idHelper.innerText = "Ingresa el código o número identificador visible en la caja física.";
+    if (idLabel) idLabel.innerHTML = '2. Distrito de la Caja: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio (Alfanumérico 7 caracteres)</span>';
+    if (idInput) {
+      idInput.placeholder = "Ej: ZIH0061 o IND0017 (7 caracteres)";
+      idInput.maxLength = 7;
+      idInput.type = "text";
+      idInput.value = "";
+    }
+    if (idHelper) idHelper.innerHTML = '<span style="color:#0369a1; font-weight:600;">📦 Obligatorio:</span> Formato alfanumérico de <strong>7 caracteres</strong> (ejemplo: ZIH0061, IND0017).';
     if (catLabel) catLabel.innerHTML = '3. Catálogo de Modelos de Cajas: <span style="color:#ef4444; font-size:0.75rem;">* Selecciona una</span>';
     manualSelectedModel = CAJA_MODELS[0].id;
   }
@@ -1962,13 +2034,35 @@ function confirmManualAssetSelection() {
   const idInput = document.getElementById("manualAssetIdInput");
   const rawId = (idInput?.value || "").trim().toUpperCase();
 
-  if (!rawId || rawId.length < 2 || rawId === "S/N" || rawId === "N/A") {
-    showCustomAlert("⚠️ <strong>Identificador Obligatorio:</strong><br><br>Por favor ingresa un número identificador o teléfono válido de la " + (manualSelectedType === "CASETA" ? "caseta" : "caja") + " (mínimo 2 caracteres).", "Dato Requerido");
+  if (!rawId || rawId === "S/N" || rawId === "N/A") {
+    showCustomAlert("⚠️ <strong>Identificador Obligatorio:</strong><br><br>Por favor ingresa un identificador válido para la " + (manualSelectedType === "CASETA" ? "caseta (10 dígitos)" : "caja (7 caracteres alfanuméricos)") + ".", "Dato Requerido");
     if (idInput) {
       idInput.style.border = "2px solid #ef4444";
       idInput.focus();
     }
     return;
+  }
+
+  // Validación estricta V8 de formato por tipo
+  if (manualSelectedType === "CASETA") {
+    if (!/^\d{10}$/.test(rawId)) {
+      showCustomAlert(`⚠️ <strong>Teléfono de Caseta Inválido:</strong><br><br>Para <strong>Caseta</strong>, el identificador debe contener exactamente <strong>10 dígitos numéricos</strong> (ejemplo: 9848033711).<br><br>Has ingresado: "<strong>${rawId}</strong>" (${rawId.length} caracteres).`, "Formato Inválido");
+      if (idInput) {
+        idInput.style.border = "2px solid #ef4444";
+        idInput.focus();
+      }
+      return;
+    }
+  } else {
+    // CAJA: distrito alfanumérico de 7 caracteres
+    if (!/^[A-Z0-9]{7}$/.test(rawId)) {
+      showCustomAlert(`⚠️ <strong>Distrito de Caja Inválido:</strong><br><br>Para <strong>Caja</strong>, el identificador debe ser un código de distrito alfanumérico de exactamente <strong>7 caracteres</strong> (ejemplo: ZIH0061 o IND0017).<br><br>Has ingresado: "<strong>${rawId}</strong>" (${rawId.length} caracteres).`, "Formato Inválido");
+      if (idInput) {
+        idInput.style.border = "2px solid #ef4444";
+        idInput.focus();
+      }
+      return;
+    }
   }
   if (idInput) idInput.style.border = "1px solid #cbd5e1";
 
@@ -2067,7 +2161,16 @@ function confirmManualAssetSelection() {
   const coordsStr = (latVal != null && lonVal != null) ? ` | Coords: ${latVal.toFixed(6)}, ${lonVal.toFixed(6)}` : '';
   document.getElementById("formAssetInfo").value = `Calle: ${calleVal}${coordsStr}`;
 
-  document.getElementById("ofertaColocada").value = "120 MB";
+  document.getElementById("ofertaColocada").value = "200 MB";
+  const comSel2 = document.getElementById("comentarios");
+  if (comSel2) comSel2.value = "Sin comentarios";
+  const comMan2 = document.getElementById("comentariosManual");
+  if (comMan2) { comMan2.style.display = "none"; comMan2.value = ""; }
+
+  // Resetear radios de existencia en V8 para obligar a seleccionar Sí o No
+  document.querySelectorAll('input[name="existencia"]').forEach(r => r.checked = false);
+  const grpExist2 = document.getElementById("groupExistencia");
+  if (grpExist2) { grpExist2.style.border = "none"; grpExist2.style.padding = "0"; }
 
   closeManualAssetModal();
   switchView('form');
@@ -2154,6 +2257,19 @@ function saveEvidence(event) {
     return false;
   }
 
+  // 3.0 Validación estricta V8 si es activo manual
+  if (selectedAsset.is_manual) {
+    const tipoActivo = (selectedAsset.tipo || "").trim().toUpperCase();
+    if (tipoActivo === "CASETA" && !/^\d{10}$/.test(assetId)) {
+      showCustomAlert(`⚠️ <strong>Teléfono de Caseta Inválido:</strong><br><br>El teléfono de la caseta debe tener exactamente 10 dígitos numéricos (ejemplo: 9848033711).<br><br>Valor actual: "${assetId}"`, "Formato Inválido");
+      return false;
+    }
+    if (tipoActivo === "CAJA" && !/^[A-Z0-9]{7}$/.test(assetId)) {
+      showCustomAlert(`⚠️ <strong>Distrito de Caja Inválido:</strong><br><br>El distrito de la caja debe ser alfanumérico de 7 caracteres (ejemplo: ZIH0061 o IND0017).<br><br>Valor actual: "${assetId}"`, "Formato Inválido");
+      return false;
+    }
+  }
+
   // 3.1 Prevenir Duplicados: Verificar si ya existe en el lote pendiente o ya fue completado
   const alreadyInBatch = Array.isArray(dbEvidences) && dbEvidences.some(ev => String(ev.asset_id || "").trim().toUpperCase() === assetId);
   if (alreadyInBatch) {
@@ -2202,10 +2318,17 @@ function saveEvidence(event) {
     return false;
   }
 
-  // 9. Validar Existencia en Sitio
+  // 9. Validar Existencia en Sitio (Obligatorio V8, sin opción por defecto)
   const existenciaEl = document.querySelector('input[name="existencia"]:checked');
   if (!existenciaEl || !existenciaEl.value) {
-    showCustomAlert("⚠️ <strong>Existencia Obligatoria:</strong><br><br>Por favor indica si Existe la Caja / Caseta en el sitio.", "Existencia Requerida");
+    showCustomAlert("⚠️ <strong>Selección Obligatoria de Existencia:</strong><br><br>Debes indicar obligatoriamente si la caja o caseta <strong>Existe</strong> o <strong>No Existe</strong> en el sitio antes de guardar.", "Existencia Requerida");
+    const grpExist3 = document.getElementById("groupExistencia");
+    if (grpExist3) {
+      grpExist3.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      grpExist3.style.border = "2px solid #ef4444";
+      grpExist3.style.borderRadius = "8px";
+      grpExist3.style.padding = "8px";
+    }
     return false;
   }
   const existencia = existenciaEl.value;
@@ -2260,7 +2383,11 @@ function saveEvidence(event) {
   }
 
   const proceso = document.querySelector('input[name="filterProceso"]:checked')?.value || "IMAGEN";
-  const comentarios = document.getElementById("comentarios")?.value?.trim() || "Sin observaciones";
+  let comentarios = document.getElementById("comentarios")?.value?.trim() || "Sin comentarios";
+  if (comentarios === "OTRO") {
+    const manVal = document.getElementById("comentariosManual")?.value?.trim();
+    comentarios = manVal || "Sin comentarios";
+  }
 
   const timestamp = new Date().toISOString();
   const uniqueId = selectedAsset.unique_id || generateUniqueId(tipoElemento, areaVal);
@@ -2318,6 +2445,15 @@ function saveEvidence(event) {
   if (resetBdEl) resetBdEl.value = "";
   document.getElementById("formAssetInfo").value = "";
   document.getElementById("evidenceForm").reset();
+  document.querySelectorAll('input[name="existencia"]').forEach(r => r.checked = false);
+  const ofertaResetEl = document.getElementById("ofertaColocada");
+  if (ofertaResetEl) ofertaResetEl.value = "200 MB";
+  const comSelReset = document.getElementById("comentarios");
+  if (comSelReset) comSelReset.value = "Sin comentarios";
+  const comManReset = document.getElementById("comentariosManual");
+  if (comManReset) { comManReset.style.display = "none"; comManReset.value = ""; }
+  const grpExist4 = document.getElementById("groupExistencia");
+  if (grpExist4) { grpExist4.style.border = "none"; grpExist4.style.padding = "0"; }
   photoDespuesBase64 = "";
   document.getElementById("previewDespues").style.display = "none";
   document.getElementById("iconDespues").style.display = "block";
@@ -2877,8 +3013,8 @@ async function syncAllToLinkaform() {
       btn.innerText = `⏳ Subiendo ${i + 1} de ${total} (${asset_id})...`;
     }
 
-    const exist_str = (ev.existencia || "EXISTE").toLowerCase();
-    const existencia_val = (exist_str.includes("existe") || exist_str.includes("si")) ? "sí" : "no";
+    const normExist = String(ev.existencia || "").trim().toUpperCase();
+    const existencia_val = (normExist === "NO_EXISTE" || normExist === "NO" || normExist === "INEXISTENTE") ? "no" : "sí";
     const rawOferta = String(ev.oferta_colocada || "120 MB");
     let oferta_val = "120_mb";
     if (rawOferta.includes("250")) oferta_val = "250_mb";
@@ -3314,7 +3450,7 @@ function takeSnapshot() {
 }
 
 function forceAppUpdate() {
-  if (confirm("¿Deseas actualizar la aplicación a la versión v7 y limpiar la memoria caché?")) {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v8 y limpiar la memoria caché?")) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         for (let r of regs) r.unregister();

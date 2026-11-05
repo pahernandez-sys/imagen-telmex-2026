@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Imagen Telmex 2026</title>
-  <link rel="stylesheet" href="styles.css?v=6.0">
+  <link rel="stylesheet" href="styles.css?v=8.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0055a5">
   <script>
@@ -23,8 +23,8 @@
     <div class="header-top">
       <div class="brand-title" style="display:flex; align-items:center; gap:6px;">
         <span>📦 Imagen Telmex 2026</span>
-        <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-weight:bold;">v7</span>
-        <button type="button" onclick="forceAppUpdate()" title="Recargar a v7 y Limpiar Caché" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">🔄</button>
+        <span style="font-size:0.7rem; background:#10b981; color:white; padding:2px 6px; border-radius:4px; font-weight:bold;">v8</span>
+        <button type="button" onclick="forceAppUpdate()" title="Recargar a v8 y Limpiar Caché" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:2px 6px; border-radius:4px; font-size:0.75rem; cursor:pointer;">🔄</button>
       </div>
       <div style="display:flex; align-items:center; gap:6px;">
         <button type="button" onclick="openUserSetupModal()" style="background:rgba(255,255,255,0.2); color:white; border:none; padding:4px 8px; border-radius:6px; font-size:0.75rem; cursor:pointer; font-weight:500;">
@@ -226,21 +226,32 @@
             <input type="text" id="formAssetInfo" readonly style="background:#e9ecef; font-size:0.85rem;">
           </div>
 
-          <!-- Campo 1: ¿Existe? -->
-          <div class="form-group">
-            <label>1. ¿Existe la Caja / Caseta en el Sitio?: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
+          <!-- Aviso de Recomendación de Validación en Cercanías -->
+          <div style="background: #fffbeb; border: 1.5px solid #f59e0b; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; display: flex; gap: 10px; align-items: flex-start; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);">
+            <span style="font-size: 1.4rem; line-height: 1;">⚠️</span>
+            <div style="font-size: 0.85rem; color: #92400e; line-height: 1.45;">
+              <strong style="color: #b45309; font-size: 0.9rem;">Recomendación Importante de Campo:</strong><br>
+              Si la caja o caseta no se encuentra en las coordenadas exactas del punto, <u>valida minuciosamente en las inmediaciones y alrededores</u> si existe físicamente antes de reportarla como inexistente.
+            </div>
+          </div>
+
+          <!-- Campo 1: ¿Existe? (Obligatorio, sin opción por defecto) -->
+          <div class="form-group" id="groupExistencia">
+            <label style="font-weight: bold; color: var(--text-dark); margin-bottom: 6px; display: block;">
+              1. ¿Existe la Caja / Caseta en el Sitio?: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* OBLIGATORIO (Selecciona una opción)</span>
+            </label>
             <div class="radio-group">
               <div class="radio-pill">
-                <input type="radio" id="exist_si" name="existencia" value="EXISTE" checked>
-                <label for="exist_si">✅ Existe</label>
+                <input type="radio" id="exist_si" name="existencia" value="EXISTE">
+                <label for="exist_si" style="font-weight: 600; padding: 12px 6px;">✅ Sí (Existe)</label>
               </div>
               <div class="radio-pill">
                 <input type="radio" id="exist_no" name="existencia" value="NO_EXISTE">
-                <label for="exist_no">❌ No Existe</label>
+                <label for="exist_no" style="font-weight: 600; padding: 12px 6px;">❌ No (No Existe)</label>
               </div>
               <div class="radio-pill">
                 <input type="radio" id="exist_danada" name="existencia" value="DANADA">
-                <label for="exist_danada">⚠️ Dañada</label>
+                <label for="exist_danada" style="font-weight: 600; padding: 12px 6px;">⚠️ Dañada</label>
               </div>
             </div>
           </div>
@@ -257,20 +268,29 @@
             </select>
           </div>
 
-          <!-- Campo 3: Oferta colocada -->
+          <!-- Campo 3: Oferta colocada (Por defecto 200 MB) -->
           <div class="form-group">
-            <label>3. Oferta Colocada: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
-            <select id="ofertaColocada" required>
-              <option value="120 MB" selected>120 MB</option>
-              <option value="200 MB">200 MB</option>
+            <label style="font-weight: bold; color: var(--text-dark);">3. Oferta Colocada: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Obligatorio</span></label>
+            <select id="ofertaColocada" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.95rem; font-weight: 600; background: white;">
+              <option value="200 MB" selected>200 MB (Default)</option>
+              <option value="120 MB">120 MB</option>
               <option value="250 MB">250 MB</option>
             </select>
           </div>
 
-          <!-- Campo 4: Comentarios -->
+          <!-- Campo 4: Comentarios (Lista de Opciones a Escoger) -->
           <div class="form-group">
-            <label>4. Comentarios u Observaciones de Campo (Opcional):</label>
-            <textarea id="comentarios" rows="3" placeholder="Detalles de la estructura, daños, etc..."></textarea>
+            <label style="font-weight: bold; color: var(--text-dark); margin-bottom: 6px; display: block;">
+              4. Comentarios u Observaciones de Campo: <span style="color:#ef4444; font-size:0.75rem; font-weight:bold;">* Selecciona una opción</span>
+            </label>
+            <select id="comentarios" onchange="onComentariosChange()" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: white; font-weight: 500;">
+              <option value="Sin comentarios" selected>Sin comentarios</option>
+              <option value="La caja o caseta existe pero esta dañada">La caja o caseta existe pero esta dañada</option>
+              <option value="No hay caja en el lugar pero se ve que existio caja o caseta">No hay caja en el lugar pero se ve que existio caja o caseta</option>
+              <option value="Es Caja doble cara, solo se pone Vinil en la vista vehicular">Es Caja doble cara, solo se pone Vinil en la vista vehicular</option>
+              <option value="OTRO">Otro (Escribir comentario específico...)</option>
+            </select>
+            <textarea id="comentariosManual" rows="2" placeholder="Escribe el comentario específico de campo..." style="display: none; width: 100%; margin-top: 8px; padding: 8px 10px; border-radius: 8px; border: 1.5px solid var(--primary); font-size: 0.88rem; box-sizing: border-box;"></textarea>
           </div>
 
           <!-- Campo 5: Fotografías -->
@@ -501,7 +521,7 @@
       <!-- Paso 2: Número Identificador -->
       <div class="form-group" style="margin-bottom:12px;">
         <label id="manualIdLabel" style="color:#0055a5; font-weight:bold;">2. Identificador / Código de la Caja: <span style="color:#ef4444; font-size:0.75rem;">* Obligatorio</span></label>
-        <input type="text" id="manualAssetIdInput" placeholder="Ej: TLA0012, CJ-NOR-01..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem; text-transform:uppercase; box-sizing:border-box;" required>
+        <input type="text" id="manualAssetIdInput" placeholder="Ej: ZIH0061 (Caja: 7 alfanuméricos) o 9848033711 (Caseta: 10 dígitos)..." style="width:100%; padding:10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.95rem; text-transform:uppercase; box-sizing:border-box;" required maxlength="10">
         <div id="manualIdHelper" style="font-size:0.75rem; color:#64748b; margin-top:4px;">
           Ingresa el código o número identificador visible en la caja.
         </div>
@@ -620,6 +640,6 @@
   <script src="data/catalog_part2.js"></script>
 
   <!-- Lógica de la PWA (Carga asíncrona de datos para 0 latencia) -->
-  <script src="app.js?v=6.0"></script>
+  <script src="app.js?v=8.0"></script>
 </body>
 </html>
