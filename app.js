@@ -20,8 +20,8 @@ let userContratista = "";
 let userTecnico = "";
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
-const CURRENT_APP_VERSION_ANDROID = "v8 - Android";
-const CURRENT_APP_VERSION_IPHONE = "v8 - IPhone";
+const CURRENT_APP_VERSION_ANDROID = "v9 - Android";
+const CURRENT_APP_VERSION_IPHONE = "v9 - IPhone";
 
 function getAppVersionString() {
   try {
@@ -3533,7 +3533,7 @@ function takeSnapshot() {
 }
 
 function forceAppUpdate() {
-  if (confirm("¿Deseas actualizar la aplicación a la versión v8 y limpiar la memoria caché?")) {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v9 y limpiar la memoria caché?")) {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.getRegistrations().then(regs => {
         for (let r of regs) r.unregister();
