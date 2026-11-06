@@ -76,15 +76,15 @@ const OFFICIAL_ESTADOS_AREAS = {
   "GUANAJUATO": ["CELAYA", "IRAPUATO", "LEON"],
   "GUERRERO": ["ACAPULCO", "CHILPANCINGO"],
   "HIDALGO": ["HIDALGO"],
-  "JALISCO": ["GUADALAJARA", "GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "JALISCO", "PUERTO VALLARTA"],
+  "JALISCO": ["GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "GUADALAJARA PONIENTE", "PUERTO VALLARTA"],
   "MICHOACAN": ["MICHOACAN", "MORELIA"],
   "MORELOS": ["MORELOS"],
   "NAYARIT": ["NAYARIT"],
-  "NUEVO LEON": ["MONTERREY"],
+  "NUEVO LEON": ["MONTERREY 1", "MONTERREY 2", "MONTERREY 3"],
   "OAXACA": ["OAXACA"],
   "PUEBLA": ["PUEBLA"],
   "QUERETARO": ["QUERETARO"],
-  "QUINTANA ROO": ["QUINTANA ROO", "QUINTANA ROO NORTE", "QUINTANA ROO SUR"],
+  "QUINTANA ROO": ["QUINTANA ROO NORTE", "QUINTANA ROO SUR"],
   "SAN LUIS POTOSI": ["SAN LUIS POTOSI"],
   "SINALOA": ["CULIACAN", "MAZATLAN"],
   "SONORA": ["CIUDAD OBREGON-LOS MOCH", "HERMOSILLO", "NOGALES"],
@@ -99,10 +99,14 @@ const OFFICIAL_ESTADOS_AREAS = {
 const AREA_COORDINATES_MAP = {
   "MORELOS": { lat: 18.9242, lon: -99.2216 },
   "TOLUCA": { lat: 19.2925, lon: -99.6569 },
-  "GUADALAJARA": { lat: 20.6767, lon: -103.3475 },
   "GUADALAJARA CENTRO": { lat: 20.6767, lon: -103.3475 },
   "GUADALAJARA ORIENTE": { lat: 20.6550, lon: -103.2950 },
-  "MONTERREY": { lat: 25.6866, lon: -100.3161 },
+  "GUADALAJARA PONIENTE": { lat: 20.6850, lon: -103.3900 },
+  "MONTERREY 1": { lat: 25.6866, lon: -100.3161 },
+  "MONTERREY 2": { lat: 25.7200, lon: -100.3500 },
+  "MONTERREY 3": { lat: 25.6500, lon: -100.2800 },
+  "QUINTANA ROO NORTE": { lat: 21.1619, lon: -86.8515 },
+  "QUINTANA ROO SUR": { lat: 18.5002, lon: -88.2961 },
   "QUERETARO": { lat: 20.5888, lon: -100.3899 },
   "ESTADO DE MEXICO SUR": { lat: 19.1570, lon: -100.1470 },
   "PUEBLA": { lat: 19.0414, lon: -98.2063 },
@@ -2130,6 +2134,19 @@ function confirmManualAssetSelection() {
     }
     return;
   }
+  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO", "JALISCO"].includes(areaVal)) {
+    showCustomAlert(
+      `⚠️ <strong>Sub-Área Específica Requerida:</strong><br><br>` +
+      `No se permite enviar el área genérica <strong>"${areaVal}"</strong>.<br><br>` +
+      `Por favor selecciona la sub-área oficial correspondiente en el desplegable.`,
+      "Sub-Área Requerida"
+    );
+    if (areaSelect) {
+      areaSelect.style.border = "2px solid #ef4444";
+      areaSelect.focus();
+    }
+    return;
+  }
   if (areaSelect) areaSelect.style.border = "1px solid #cbd5e1";
 
   const calleVal = (calleInput?.value || "").trim();
@@ -2343,6 +2360,18 @@ function saveEvidence(event) {
   const areaVal = (selectedAsset.area_trabajo || selectedAsset.municipio || document.getElementById("formAssetArea")?.value || "").trim().toUpperCase();
   if (!areaVal || areaVal === "CAMPO" || areaVal === "GENERAL" || areaVal === "DESCONOCIDO") {
     showCustomAlert("⚠️ <strong>Área de Trabajo Obligatoria:</strong><br><br>El registro no tiene un Área de Trabajo asignada. Por favor selecciona un Área válida.", "Área Requerida");
+    return false;
+  }
+  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO", "JALISCO"].includes(areaVal)) {
+    showCustomAlert(
+      `⚠️ <strong>Sub-Área Específica Requerida:</strong><br><br>` +
+      `No está permitido enviar el área genérica <strong>"${areaVal}"</strong>.<br><br>` +
+      `Debes seleccionar la sub-área oficial correcta:<br>` +
+      (areaVal === "MONTERREY" ? `• <strong>MONTERREY 1, MONTERREY 2 o MONTERREY 3</strong>` :
+       (areaVal === "GUADALAJARA" || areaVal === "JALISCO") ? `• <strong>GUADALAJARA CENTRO, ORIENTE o PONIENTE</strong>` :
+       `• <strong>QUINTANA ROO NORTE o QUINTANA ROO SUR</strong>`),
+      "Sub-Área Requerida"
+    );
     return false;
   }
 
