@@ -6,6 +6,10 @@ let photoAntesBase64 = "";
 let photoDespuesBase64 = "";
 let dbEvidences = [];
 let completedAssetIdsSet = new Set();
+let remoteCompletedSet = new Set();
+let isSyncingCompletedAssets = false;
+const COMPLETED_ASSETS_REMOTE_URL = "https://pahernandez-sys.github.io/imagen-telmex-2026/data/completed_assets.json";
+const COMPLETED_ASSETS_LOCAL_URL = "data/completed_assets.json";
 let selectedModelFilter = "";
 let forceOfflineState = false;
 let lastKnownOnlineState = null;
@@ -574,6 +578,7 @@ function initApp() {
   window.addEventListener("offline", () => updateNetworkUI(false));
   setInterval(() => checkNetworkConnectivity(), 3000);
 
+  initCompletedAssetsSync();
   fetchCatalogData();
 }
 
@@ -687,10 +692,24 @@ function loadCatalogViaScript() {
 }
 
 function onCatalogLoaded() {
-  const badge = document.getElementById("catalogCountBadge");
-  if (badge) badge.innerText = `${catalog.length.toLocaleString()} registros`;
+  updateCatalogCountBadge();
   populateModelFilter("TODOS");
   applyHierarchyFilter();
+}
+
+function updateCatalogCountBadge() {
+  const badge = document.getElementById("catalogCountBadge");
+  if (!badge) return;
+  if (!Array.isArray(catalog) || catalog.length === 0) {
+    badge.innerText = "Cargando...";
+    return;
+  }
+  const completedIds = getCompletedAssetIdsSet();
+  const availableCount = catalog.filter(item => {
+    const id = String(item.id || "").trim().toUpperCase();
+    return !completedIds.has(id);
+  }).length;
+  badge.innerText = `${availableCount.toLocaleString()} disponibles (${completedIds.size.toLocaleString()} completadas)`;
 }
 
 function checkNetworkConnectivity() {
@@ -2043,6 +2062,22 @@ function confirmManualAssetSelection() {
     return;
   }
 
+  // Validación de Duplicado en Base Linkaform
+  const allCompletedAssetIds = getCompletedAssetIdsSet();
+  if (allCompletedAssetIds.has(rawId)) {
+    showCustomAlert(
+      `⚠️ <strong>Activo Ya Completado Previamente:</strong><br><br>` +
+      `El identificador <strong>${rawId}</strong> ya fue registrado y validado en Linkaform por otra cuadrilla.<br><br>` +
+      `No es necesario volver a capturarlo.`,
+      "Activo Ya Completado"
+    );
+    if (idInput) {
+      idInput.style.border = "2px solid #ef4444";
+      idInput.focus();
+    }
+    return;
+  }
+
   // Validación estricta V8 de formato por tipo
   if (manualSelectedType === "CASETA") {
     if (!/^\d{10}$/.test(rawId)) {
@@ -2471,6 +2506,25 @@ function saveEvidence(event) {
 // ---------------------------------------------------------
 function getCompletedAssetIdsSet() {
   const set = new Set();
+
+  // 1. Activos completados en Linkaform remotamente (Base Dinámica)
+  if (remoteCompletedSet && remoteCompletedSet.size > 0) {
+    remoteCompletedSet.forEach(id => {
+      if (id) set.add(id);
+    });
+  } else {
+    const remoteSaved = localStorage.getItem("TELMEX_REMOTE_COMPLETED_SET");
+    if (remoteSaved) {
+      try {
+        const arr = JSON.parse(remoteSaved);
+        if (Array.isArray(arr)) {
+          arr.forEach(id => { if (id) set.add(String(id).trim().toUpperCase()); });
+        }
+      } catch(e) {}
+    }
+  }
+
+  // 2. Activos completados en este dispositivo
   const permSaved = localStorage.getItem("TELMEX_COMPLETED_ASSETS");
   if (permSaved) {
     try {
@@ -3472,3 +3526,157 @@ window.forceAppUpdate = forceAppUpdate;
 window.onElementTypeChange = onElementTypeChange;
 window.onFilterModeloChange = onFilterModeloChange;
 window.populateModelFilter = populateModelFilter;
+
+
+// =========================================================================
+// MÓDULO DE SINCRONIZACIÓN DINÁMICA DE BASE LINKAFORM (DESCUENTO DE COMPLETADAS)
+// =========================================================================
+
+function initCompletedAssetsSync() {
+  // Cargar lista remota de localStorage si existe
+  loadRemoteCompletedSetFromStorage();
+  updateSyncStatusUI();
+
+  // Auto-sincronizar al iniciar si hay internet y pasaron > 2 hrs desde la última sync
+  const lastSyncTs = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_TS") || "0", 10);
+  const hoursSinceSync = (Date.now() - lastSyncTs) / (1000 * 60 * 60);
+  if (navigator.onLine && (hoursSinceSync > 2 || lastSyncTs === 0)) {
+    setTimeout(() => {
+      fetchCompletedAssets({ silent: true });
+    }, 2000);
+  }
+}
+
+function loadRemoteCompletedSetFromStorage() {
+  try {
+    const raw = localStorage.getItem("TELMEX_REMOTE_COMPLETED_SET");
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        remoteCompletedSet = new Set(arr.map(id => String(id).trim().toUpperCase()));
+      }
+    }
+  } catch(e) {
+    console.warn("[Sync] Error leyendo remote completed set:", e);
+  }
+}
+
+async function fetchCompletedAssets(options = {}) {
+  const silent = options.silent === true;
+  if (isSyncingCompletedAssets) return;
+  isSyncingCompletedAssets = true;
+
+  const btn = document.getElementById("btnSyncCompletedAssets");
+  const icon = document.getElementById("syncBtnIcon");
+  if (btn && icon) {
+    icon.style.display = "inline-block";
+    icon.style.animation = "spin 1s linear infinite";
+    btn.style.opacity = "0.7";
+    btn.disabled = true;
+  }
+
+  let success = false;
+  let data = null;
+
+  // 1. Intentar URL remota en vivo de GitHub Pages
+  try {
+    const liveUrl = `${COMPLETED_ASSETS_REMOTE_URL}?_=${Date.now()}`;
+    const resp = await fetch(liveUrl, { cache: "no-store" });
+    if (resp.ok) {
+      data = await resp.json();
+      success = true;
+      console.log(`[Sync] Descargados ${data.total_completed} activos desde GitHub Pages.`);
+    }
+  } catch(e) {
+    console.warn("[Sync] Fetch remoto falló, intentando fallback local:", e);
+  }
+
+  // 2. Fallback a archivo local relativo si el remoto falló
+  if (!success) {
+    try {
+      const localUrl = `${COMPLETED_ASSETS_LOCAL_URL}?_=${Date.now()}`;
+      const resp = await fetch(localUrl, { cache: "no-store" });
+      if (resp.ok) {
+        data = await resp.json();
+        success = true;
+        console.log(`[Sync] Descargados ${data.total_completed} activos desde archivo local.`);
+      }
+    } catch(e2) {
+      console.warn("[Sync] Fallback local falló:", e2);
+    }
+  }
+
+  if (success && data && Array.isArray(data.completed_ids)) {
+    const idList = data.completed_ids.map(id => String(id).trim().toUpperCase());
+    remoteCompletedSet = new Set(idList);
+
+    localStorage.setItem("TELMEX_REMOTE_COMPLETED_SET", JSON.stringify(idList));
+    localStorage.setItem("TELMEX_REMOTE_COMPLETED_TS", String(Date.now()));
+    localStorage.setItem("TELMEX_REMOTE_COMPLETED_TIME", data.updated_at_display || new Date().toLocaleString());
+    localStorage.setItem("TELMEX_REMOTE_COMPLETED_COUNT", String(data.total_completed || idList.length));
+
+    // Actualizar estado en memoria y en la interfaz
+    getCompletedAssetIdsSet();
+    updateSyncStatusUI();
+    updateCatalogCountBadge();
+    applyHierarchyFilter();
+
+    if (!silent) {
+      showCustomAlert(
+        `✅ <strong>Base Sincronizada con Éxito:</strong><br><br>` +
+        `Se han descontado <strong>${idList.length.toLocaleString()}</strong> activos ya ejecutados y reportados en Linkaform.<br><br>` +
+        `En el buscador y mapa solo verás los puntos <strong>pendientes por realizar</strong>.`,
+        "Base Actualizada"
+      );
+    }
+  } else {
+    if (!silent) {
+      const lastTime = localStorage.getItem("TELMEX_REMOTE_COMPLETED_TIME") || "Previa";
+      showCustomAlert(
+        `📶 <strong>Sin Conexión para Sincronizar:</strong><br><br>` +
+        `No fue posible conectar con el servidor de Linkaform en este momento.<br><br>` +
+        `Tu dispositivo sigue funcionando normalmente con la última base sincronizada del <strong>${lastTime}</strong>.`,
+        "Sincronización Offline"
+      );
+    }
+  }
+
+  if (btn && icon) {
+    icon.style.animation = "";
+    btn.style.opacity = "1";
+    btn.disabled = false;
+  }
+  isSyncingCompletedAssets = false;
+}
+
+function syncCompletedAssetsManual() {
+  fetchCompletedAssets({ silent: false });
+}
+window.syncCompletedAssetsManual = syncCompletedAssetsManual;
+
+function updateSyncStatusUI() {
+  const badge = document.getElementById("syncStatusBadge");
+  const text = document.getElementById("syncStatusText");
+  const lastTime = localStorage.getItem("TELMEX_REMOTE_COMPLETED_TIME");
+  const count = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_COUNT") || "0", 10);
+
+  if (badge) {
+    if (count > 0) {
+      badge.innerText = "Al día";
+      badge.style.background = "#dcfce7";
+      badge.style.color = "#166534";
+    } else {
+      badge.innerText = "Pendiente";
+      badge.style.background = "#fef3c7";
+      badge.style.color = "#92400e";
+    }
+  }
+
+  if (text) {
+    if (lastTime && count > 0) {
+      text.innerText = `Corte: ${lastTime} • ${count.toLocaleString()} completadas descontadas`;
+    } else {
+      text.innerText = "Pulsa Actualizar para descontar trabajos de Linkaform";
+    }
+  }
+}

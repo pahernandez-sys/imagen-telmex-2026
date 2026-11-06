@@ -70,6 +70,23 @@
     <!-- ==================== VISTA 1: BUSQUEDA Y SELECCIÓN ==================== -->
     <section id="viewSearch" class="view active">
       
+      <!-- BARRA DE SINCRONIZACIÓN DE BASE (DESCUENTO DE COMPLETADAS LINKAFORM) -->
+      <div class="sync-bar-card">
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-size: 0.86rem; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 6px;">
+            <span>📡 Base Dinámica Linkaform</span>
+            <span id="syncStatusBadge" style="font-size: 0.7rem; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: #dcfce7; color: #166534;">Sincronizado</span>
+          </div>
+          <div id="syncStatusText" style="font-size: 0.74rem; color: #64748b;">
+            Cargando estado de la base...
+          </div>
+        </div>
+        <button type="button" id="btnSyncCompletedAssets" class="sync-bar-btn" onclick="syncCompletedAssetsManual()" title="Descargar lista de cajas y casetas completadas en Linkaform para ocultarlas">
+          <span id="syncBtnIcon">🔄</span>
+          <span>Actualizar Base</span>
+        </button>
+      </div>
+
       <div class="card">
         <div class="card-title">
           <span>1. Filtros de Búsqueda y Zona</span>
