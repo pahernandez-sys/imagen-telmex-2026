@@ -470,6 +470,55 @@ input:focus, select:focus, textarea:focus {
   border-color: #0284c7;
 }
 
+
+/* Botón de Linterna / Flash Nocturno */
+.btn-camera-flash {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: #334155;
+  color: #f8fafc;
+  border: 2px solid #475569;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-camera-flash:active {
+  transform: scale(0.98);
+}
+
+.btn-camera-flash.torch-active {
+  background: #f59e0b;
+  color: #0f172a;
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.night-assist-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 10;
+  animation: nightGlow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes nightGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
+
 .network-toast.info {
   background-color: #0284c7;
 }
@@ -637,6 +686,55 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Toast Notificación Cambios de Red (Online / Offline) */
+
+/* Botón de Linterna / Flash Nocturno */
+.btn-camera-flash {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: #334155;
+  color: #f8fafc;
+  border: 2px solid #475569;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-camera-flash:active {
+  transform: scale(0.98);
+}
+
+.btn-camera-flash.torch-active {
+  background: #f59e0b;
+  color: #0f172a;
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.night-assist-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 10;
+  animation: nightGlow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes nightGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
+
 .network-toast {
   position: fixed;
   top: 14px;
@@ -654,8 +752,106 @@ input:focus, select:focus, textarea:focus {
   pointer-events: none;
 }
 
+
+/* Botón de Linterna / Flash Nocturno */
+.btn-camera-flash {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: #334155;
+  color: #f8fafc;
+  border: 2px solid #475569;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-camera-flash:active {
+  transform: scale(0.98);
+}
+
+.btn-camera-flash.torch-active {
+  background: #f59e0b;
+  color: #0f172a;
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.night-assist-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 10;
+  animation: nightGlow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes nightGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
+}
+
 .network-toast.online {
   background-color: #16a34a;
+}
+
+
+/* Botón de Linterna / Flash Nocturno */
+.btn-camera-flash {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  background: #334155;
+  color: #f8fafc;
+  border: 2px solid #475569;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-camera-flash:active {
+  transform: scale(0.98);
+}
+
+.btn-camera-flash.torch-active {
+  background: #f59e0b;
+  color: #0f172a;
+  border-color: #fbbf24;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.night-assist-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: 8px solid rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 0 35px rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+  z-index: 10;
+  animation: nightGlow 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes nightGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; }
 }
 
 .network-toast.offline {

@@ -433,9 +433,14 @@
       
       <div class="camera-viewfinder-container">
         <video id="cameraVideo" autoplay playsinline muted></video>
+        <div id="nightAssistOverlay" class="night-assist-overlay" style="display:none;"></div>
       </div>
 
       <div class="camera-modal-actions">
+        <!-- Control de Flash / Linterna Nocturna -->
+        <button type="button" id="btnToggleFlash" class="btn-camera-flash" onclick="toggleFlash()">
+          <span id="flashIcon">🔦</span> <span id="btnToggleFlashText">Linterna: APAGADA</span>
+        </button>
         <button type="button" class="btn-camera-capture" onclick="takeSnapshot()">📸 TOMAR FOTO</button>
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn-camera-flip" onclick="flipCamera()">🔄 Cambiar Cámara</button>
