@@ -1,4 +1,4 @@
-// Service Worker de Limpieza y Neutralización de Caché v9.0-flash-1794023971
+// Service Worker de Limpieza y Neutralización de Caché v9.0-flash-1794331748
 const CACHE_NAME = "telmex-pwa-cache-v90-clean";
 
 self.addEventListener("install", (event) => {

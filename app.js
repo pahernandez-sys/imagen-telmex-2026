@@ -76,7 +76,7 @@ const OFFICIAL_ESTADOS_AREAS = {
   "GUANAJUATO": ["CELAYA", "IRAPUATO", "LEON"],
   "GUERRERO": ["ACAPULCO", "CHILPANCINGO"],
   "HIDALGO": ["HIDALGO"],
-  "JALISCO": ["GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "GUADALAJARA PONIENTE", "PUERTO VALLARTA"],
+  "JALISCO": ["JALISCO", "GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "GUADALAJARA PONIENTE", "PUERTO VALLARTA"],
   "MICHOACAN": ["MICHOACAN", "MORELIA"],
   "MORELOS": ["MORELOS"],
   "NAYARIT": ["NAYARIT"],
@@ -2134,7 +2134,7 @@ function confirmManualAssetSelection() {
     }
     return;
   }
-  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO", "JALISCO"].includes(areaVal)) {
+  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO"].includes(areaVal)) {
     showCustomAlert(
       `⚠️ <strong>Sub-Área Específica Requerida:</strong><br><br>` +
       `No se permite enviar el área genérica <strong>"${areaVal}"</strong>.<br><br>` +
@@ -2362,13 +2362,13 @@ function saveEvidence(event) {
     showCustomAlert("⚠️ <strong>Área de Trabajo Obligatoria:</strong><br><br>El registro no tiene un Área de Trabajo asignada. Por favor selecciona un Área válida.", "Área Requerida");
     return false;
   }
-  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO", "JALISCO"].includes(areaVal)) {
+  if (["MONTERREY", "GUADALAJARA", "QUINTANA ROO"].includes(areaVal)) {
     showCustomAlert(
       `⚠️ <strong>Sub-Área Específica Requerida:</strong><br><br>` +
       `No está permitido enviar el área genérica <strong>"${areaVal}"</strong>.<br><br>` +
       `Debes seleccionar la sub-área oficial correcta:<br>` +
       (areaVal === "MONTERREY" ? `• <strong>MONTERREY 1, MONTERREY 2 o MONTERREY 3</strong>` :
-       (areaVal === "GUADALAJARA" || areaVal === "JALISCO") ? `• <strong>GUADALAJARA CENTRO, ORIENTE o PONIENTE</strong>` :
+       areaVal === "GUADALAJARA" ? `• <strong>GUADALAJARA CENTRO, ORIENTE o PONIENTE</strong>` :
        `• <strong>QUINTANA ROO NORTE o QUINTANA ROO SUR</strong>`),
       "Sub-Área Requerida"
     );
