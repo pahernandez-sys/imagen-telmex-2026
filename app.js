@@ -3792,3 +3792,344 @@ function updateSyncStatusUI() {
     }
   }
 }
+
+
+// =========================================================
+// MAPA DE RECORRIDO INTERACTIVO: 35 MÁS CERCANAS
+// =========================================================
+let routeMapInstance = null;
+let routeMapMarkersGroup = null;
+let routeMapPolylineLayer = null;
+let routeMarkersMap = {};
+let isRouteLineVisible = true;
+let currentRouteMapFilter = "AUTO";
+let cachedRoute35Items = [];
+
+function openRouteMapModal() {
+  const modal = document.getElementById("routeMapModal");
+  if (modal) {
+    modal.style.display = "flex";
+  }
+
+  // Vibración táctil si el dispositivo la soporta
+  if (typeof navigator !== 'undefined' && navigator.vibrate) {
+    try { navigator.vibrate([40, 30, 40]); } catch (e) {}
+  }
+
+  // Sincronizar filtro con el radio button de la vista principal si es la primera apertura
+  const mainFilterVal = document.querySelector('input[name="filterElemento"]:checked')?.value || "TODOS";
+  if (currentRouteMapFilter === "AUTO" || !currentRouteMapFilter) {
+    currentRouteMapFilter = mainFilterVal;
+  }
+
+  syncRouteFilterButtons(currentRouteMapFilter);
+  renderRouteMap(currentRouteMapFilter);
+}
+
+function closeRouteMapModal() {
+  const modal = document.getElementById("routeMapModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function syncRouteFilterButtons(tipo) {
+  const ids = {
+    'TODOS': 'btnRouteFilterAll',
+    'CAJA': 'btnRouteFilterCajas',
+    'CASETA': 'btnRouteFilterCasetas'
+  };
+  ['btnRouteFilterAll', 'btnRouteFilterCajas', 'btnRouteFilterCasetas'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.classList.remove('active');
+  });
+  const targetId = ids[tipo] || 'btnRouteFilterAll';
+  document.getElementById(targetId)?.classList.add('active');
+}
+
+function setRouteMapFilter(tipo) {
+  currentRouteMapFilter = tipo;
+  syncRouteFilterButtons(tipo);
+  renderRouteMap(tipo);
+}
+
+function renderRouteMap(filterType) {
+  let userLat = (currentGpsCoords && currentGpsCoords.lat) ? Number(currentGpsCoords.lat) : null;
+  let userLon = (currentGpsCoords && currentGpsCoords.lon) ? Number(currentGpsCoords.lon) : null;
+
+  // Si no tenemos GPS aún, solicitarlo inmediatamente
+  if (userLat === null || userLon === null) {
+    const subtitle = document.getElementById("routeMapSubtitle");
+    if (subtitle) subtitle.innerText = "📡 Solicitando ubicación GPS para calcular las 35 más cercanas...";
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          currentGpsCoords = {
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude,
+            accuracy: pos.coords.accuracy
+          };
+          renderRouteMap(currentRouteMapFilter);
+        },
+        (err) => {
+          console.warn("[GPS] Falló geolocalización en mapa:", err);
+          // Fallback a coordenadas del primer activo con lat/lon o centro Guadalajara
+          const firstValid = (catalog || []).find(it => it.lat && it.lon && Number(it.lat) !== 0);
+          userLat = firstValid ? Number(firstValid.lat) : 20.6736;
+          userLon = firstValid ? Number(firstValid.lon) : -103.3500;
+          currentGpsCoords = { lat: userLat, lon: userLon, accuracy: 100 };
+          renderRouteMap(currentRouteMapFilter);
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
+      );
+    }
+    return;
+  }
+
+  const completedIds = (typeof getCompletedAssetIdsSet === "function") ? getCompletedAssetIdsSet() : new Set();
+
+  let tipoTarget = filterType;
+  if (tipoTarget === "AUTO") {
+    const radio = document.querySelector('input[name="filterElemento"]:checked');
+    tipoTarget = radio ? radio.value : "TODOS";
+  }
+
+  const modelFilter = document.getElementById("filterModeloEspecifico")?.value || "TODOS";
+
+  const candidates = [];
+  const catLen = (typeof catalog !== 'undefined' && Array.isArray(catalog)) ? catalog.length : 0;
+
+  for (let i = 0; i < catLen; i++) {
+    const item = catalog[i];
+    const itemId = String(item.id || "").trim().toUpperCase();
+    const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
+
+    // Omitir ya completadas en Linkaform
+    if (completedIds.has(itemId) || (itemUid && completedIds.has(itemUid))) continue;
+
+    // Filtro por tipo (CASETA / CAJA)
+    if (tipoTarget !== "TODOS" && item.tipo !== tipoTarget) continue;
+
+    // Filtro por modelo si está seleccionado
+    if (modelFilter !== "TODOS" && typeof matchesModelFilter === "function") {
+      if (!matchesModelFilter(item.modelo_tipo, modelFilter, item.tipo)) continue;
+    }
+
+    // Coordenadas válidas
+    if (item.lat != null && item.lon != null && !isNaN(Number(item.lat)) && !isNaN(Number(item.lon))) {
+      const iLat = Number(item.lat);
+      const iLon = Number(item.lon);
+      if (iLat !== 0 && iLon !== 0) {
+        const dist = haversineDistance(userLat, userLon, iLat, iLon);
+        candidates.push({ ...item, lat: iLat, lon: iLon, dist_m: dist });
+      }
+    }
+  }
+
+  // Ordenar por distancia ascendente
+  candidates.sort((a, b) => a.dist_m - b.dist_m);
+  const top35 = candidates.slice(0, 35);
+  cachedRoute35Items = top35;
+
+  // Actualizar indicadores de cabecera
+  const countBadge = document.getElementById("routeMapCountBadge");
+  const subtitleEl = document.getElementById("routeMapSubtitle");
+  const traySummary = document.getElementById("routeTraySummary");
+
+  const tipoLabel = tipoTarget === "CAJA" ? "Cajas" : (tipoTarget === "CASETA" ? "Casetas" : "Cajas y Casetas");
+  if (countBadge) countBadge.innerText = `${top35.length} ${tipoLabel.toLowerCase()} más cercanas`;
+  
+  if (subtitleEl) {
+    if (top35.length > 0) {
+      const minD = Math.round(top35[0].dist_m);
+      const maxD = Math.round(top35[top35.length - 1].dist_m);
+      const minStr = minD >= 1000 ? `${(minD/1000).toFixed(1)} km` : `${minD} m`;
+      const maxStr = maxD >= 1000 ? `${(maxD/1000).toFixed(1)} km` : `${maxD} m`;
+      subtitleEl.innerText = `Ruta organizada: de ${minStr} a ${maxStr} de distancia`;
+    } else {
+      subtitleEl.innerText = "No se encontraron activos pendientes con coordenadas válidas.";
+    }
+  }
+
+  if (traySummary) traySummary.innerText = `${top35.length} activos en ruta`;
+
+  // Inicializar Leaflet si no existe
+  if (typeof L === 'undefined') {
+    console.error("[Leaflet] Librería Leaflet no disponible.");
+    return;
+  }
+
+  const mapContainer = document.getElementById('routeLeafletMap');
+  if (!mapContainer) return;
+
+  if (!routeMapInstance) {
+    routeMapInstance = L.map('routeLeafletMap', {
+      zoomControl: true,
+      attributionControl: false
+    });
+
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(routeMapInstance);
+
+    routeMapMarkersGroup = L.featureGroup().addTo(routeMapInstance);
+    routeMapPolylineLayer = L.polyline([], {
+      color: '#0284c7',
+      weight: 3,
+      dashArray: '6, 8',
+      opacity: 0.8
+    }).addTo(routeMapInstance);
+  }
+
+  routeMapMarkersGroup.clearLayers();
+  routeMarkersMap = {};
+
+  // 1. Marcador de Mi Ubicación Actual
+  const userPinIcon = L.divIcon({
+    className: 'user-gps-marker',
+    html: `
+      <div style="position:relative; width:22px; height:22px;">
+        <div style="position:absolute; inset:-5px; border-radius:50%; background:rgba(2,132,199,0.35);" class="user-gps-pulse"></div>
+        <div style="width:22px; height:22px; border-radius:50%; background:#0284c7; border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.4); display:flex; align-items:center; justify-content:center; color:white; font-size:11px;">📍</div>
+      </div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11]
+  });
+
+  L.marker([userLat, userLon], { icon: userPinIcon }).addTo(routeMapMarkersGroup)
+    .bindPopup('<div style="font-size:0.85rem; font-weight:bold; color:#0f172a;">📍 Mi Ubicación Actual</div><div style="font-size:0.75rem; color:#64748b;">Punto de inicio para organizar el recorrido</div>');
+
+  // 2. Marcadores numerados del 1 al 35
+  const lineCoords = [[userLat, userLon]];
+  const trayList = document.getElementById("routeMapItemsList");
+  if (trayList) trayList.innerHTML = "";
+
+  top35.forEach((item, idx) => {
+    const num = idx + 1;
+    const isCaseta = (item.tipo === 'CASETA');
+    const pinBg = isCaseta ? '#f59e0b' : '#0284c7';
+    const typeIcon = isCaseta ? '📞' : '📦';
+    const distM = Math.round(item.dist_m);
+    const distLabel = distM >= 1000 ? `${(distM / 1000).toFixed(1)} km` : `${distM} m`;
+
+    const pinHtml = `
+      <div style="background:${pinBg}; color:white; font-weight:800; font-size:11px; width:28px; height:28px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); display:flex; align-items:center; justify-content:center; box-shadow:0 3px 6px rgba(0,0,0,0.35); border:2px solid white;">
+        <span style="transform:rotate(45deg);">${num}</span>
+      </div>
+    `;
+
+    const marker = L.marker([item.lat, item.lon], {
+      icon: L.divIcon({
+        className: 'route-num-pin',
+        html: pinHtml,
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -28]
+      })
+    }).addTo(routeMapMarkersGroup);
+
+    const popupHtml = `
+      <div style="font-family: inherit; font-size: 0.85rem; min-width: 200px;">
+        <div style="font-weight: 800; font-size: 0.95rem; color: #0f172a; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
+          <span>#${num} • ${item.id}</span>
+          <span style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; background: ${isCaseta ? '#fef3c7' : '#e0f2fe'}; color: ${isCaseta ? '#b45309' : '#0369a1'}; font-weight: bold;">${typeIcon} ${item.tipo}</span>
+        </div>
+        <div style="font-size: 0.8rem; color: #334155; margin-bottom: 3px;"><strong>Modelo:</strong> ${item.modelo_tipo || 'N/A'}</div>
+        <div style="font-size: 0.78rem; color: #64748b; margin-bottom: 4px;">📍 ${item.calle || 'S/N'}${item.colonia ? ', ' + item.colonia : ''}</div>
+        <div style="font-size: 0.8rem; font-weight: 700; color: #16a34a; margin-bottom: 8px;">📏 Distancia: A ${distLabel}</div>
+        <div style="display: flex; gap: 6px;">
+          <button onclick="selectAssetFromRouteMap('${item.id}')" style="flex: 1; background: #0284c7; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer;">🚀 Capturar</button>
+          <button onclick="openExternalNavigation(${item.lat}, ${item.lon})" style="background: #f1f5f9; color: #0f172a; border: 1px solid #cbd5e1; padding: 6px 8px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;" title="Navegar con Google Maps">🧭 Ir</button>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupHtml);
+    routeMarkersMap[item.id] = marker;
+    lineCoords.push([item.lat, item.lon]);
+
+    // Elemento en la lista del panel inferior
+    if (trayList) {
+      const card = document.createElement("div");
+      card.style.cssText = "display: flex; align-items: center; justify-content: space-between; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 10px; gap: 8px; font-size: 0.8rem; cursor: pointer; transition: background 0.15s ease;";
+      card.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+          <span style="background: ${pinBg}; color: white; font-weight: 800; font-size: 0.72rem; padding: 2px 6px; border-radius: 6px; flex-shrink: 0;">#${num}</span>
+          <div style="min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <strong style="color: #0f172a;">${item.id}</strong>
+            <span style="color: #64748b; font-size: 0.74rem;"> (${typeIcon} ${item.modelo_tipo || item.tipo})</span>
+            <div style="font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">📍 ${item.calle || 'S/N'}, ${item.colonia || ''}</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span style="font-size: 0.75rem; font-weight: 700; color: #16a34a;">${distLabel}</span>
+          <button type="button" onclick="event.stopPropagation(); selectAssetFromRouteMap('${item.id}')" style="background: #0284c7; color: white; border: none; padding: 5px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 700; cursor: pointer;" title="Seleccionar para capturar">🚀</button>
+        </div>
+      `;
+      card.onclick = () => {
+        routeMapInstance.flyTo([item.lat, item.lon], 17);
+        marker.openPopup();
+      };
+      trayList.appendChild(card);
+    }
+  });
+
+  // Trazar línea de recorrido
+  if (isRouteLineVisible) {
+    routeMapPolylineLayer.setLatLngs(lineCoords);
+  } else {
+    routeMapPolylineLayer.setLatLngs([]);
+  }
+
+  // Ajustar zoom para abarcar todo el recorrido
+  if (routeMapMarkersGroup.getLayers().length > 0) {
+    routeMapInstance.fitBounds(routeMapMarkersGroup.getBounds().pad(0.12));
+  }
+  
+  setTimeout(() => {
+    if (routeMapInstance) routeMapInstance.invalidateSize();
+  }, 250);
+}
+
+function selectAssetFromRouteMap(assetId) {
+  closeRouteMapModal();
+  let found = null;
+  if (typeof catalog !== 'undefined' && Array.isArray(catalog)) {
+    found = catalog.find(a => String(a.id).trim().toUpperCase() === String(assetId).trim().toUpperCase());
+  }
+  if (found) {
+    selectAsset(found);
+  } else {
+    alert("No se encontró el activo en el catálogo.");
+  }
+}
+
+function openExternalNavigation(lat, lon) {
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lon}`, '_blank');
+}
+
+function toggleRouteLine() {
+  isRouteLineVisible = !isRouteLineVisible;
+  const btnTxt = document.getElementById('routeLineBtnText');
+  if (btnTxt) btnTxt.innerText = isRouteLineVisible ? 'Línea: ON' : 'Línea: OFF';
+  if (routeMapPolylineLayer && cachedRoute35Items) {
+    if (isRouteLineVisible && currentGpsCoords) {
+      const lineCoords = [[currentGpsCoords.lat, currentGpsCoords.lon], ...cachedRoute35Items.map(p => [p.lat, p.lon])];
+      routeMapPolylineLayer.setLatLngs(lineCoords);
+    } else {
+      routeMapPolylineLayer.setLatLngs([]);
+    }
+  }
+}
+
+function centerRouteMapOnUser() {
+  if (currentGpsCoords && currentGpsCoords.lat && routeMapInstance) {
+    routeMapInstance.flyTo([currentGpsCoords.lat, currentGpsCoords.lon], 16);
+  } else if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      currentGpsCoords = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+      if (routeMapInstance) routeMapInstance.flyTo([currentGpsCoords.lat, currentGpsCoords.lon], 16);
+    });
+  }
+}
