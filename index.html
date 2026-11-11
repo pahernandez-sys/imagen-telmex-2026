@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Imagen Telmex 2026</title>
+    <link rel="stylesheet" href="libs/leaflet.css">
+  <script src="libs/leaflet.js"></script>
   <link rel="stylesheet" href="styles.css?v=8.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0055a5">
@@ -200,6 +202,15 @@
           <span>🗺️</span>
           <span><strong>Tip:</strong> Deja presionado cualquier activo o pulsa <strong>Maps</strong> para abrir su ubicación en Google Maps.</span>
         </div>
+        
+        <!-- Botón para quien quiera ocupar el mapa de recorrido con las 35 más cercanas -->
+        <div style="margin-bottom: 12px;">
+          <button type="button" id="btnOpenRouteMap" onclick="openRouteMapModal()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; font-size: 0.95rem; padding: 12px 16px; border-radius: 10px; background: linear-gradient(135deg, #0284c7, #0055a5); color: white; border: none; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); cursor: pointer; transition: all 0.2s ease;">
+            <span style="font-size: 1.25rem;">🗺️</span>
+            <span>Organizar Recorrido (Ver Mapa con 35 más cercanas)</span>
+          </button>
+        </div>
+
         <div id="searchResultsList" style="max-height: 420px; overflow-y: auto;">
           <p style="text-align:center; color:var(--text-muted); font-size:0.85rem; padding:20px;">
             📡 Obteniendo ubicación GPS para mostrar las 35 cajas o casetas más cercanas...
@@ -681,5 +692,63 @@
 
   <!-- Lógica de la PWA (Carga asíncrona de datos para 0 latencia) -->
   <script src="app.js?v=8.0"></script>
+
+  <!-- ==================== MODAL MAPA DE RECORRIDO INTERACTIVO (35 MÁS CERCANAS) ==================== -->
+  <div id="routeMapModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); flex-direction: column; height: 100vh; height: 100dvh; max-height: 100vh;">
+    <!-- Encabezado del Modal -->
+    <div style="background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+      <div style="min-width: 0;">
+        <div style="font-size: 1rem; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+          <span>🗺️ Mapa de Recorrido</span>
+          <span id="routeMapCountBadge" style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px; background: #e0f2fe; color: #0369a1;">35 más cercanas</span>
+        </div>
+        <div id="routeMapSubtitle" style="font-size: 0.75rem; color: #64748b; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          35 puntos ordenados por proximidad GPS desde tu posición
+        </div>
+      </div>
+      <button type="button" onclick="closeRouteMapModal()" style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; color: #475569; cursor: pointer; flex-shrink: 0;" title="Cerrar mapa">
+        ✕
+      </button>
+    </div>
+
+    <!-- Barra de Herramientas y Filtros Rápidos -->
+    <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; flex-shrink: 0;">
+      <!-- Selector de Tipo en el Mapa -->
+      <div style="display: flex; gap: 3px; background: #e2e8f0; padding: 3px; border-radius: 8px; overflow-x: auto; max-width: 100%;">
+        <button type="button" id="btnRouteFilterAll" onclick="setRouteMapFilter('TODOS')" class="route-filter-btn active">🌐 Todas (35)</button>
+        <button type="button" id="btnRouteFilterCajas" onclick="setRouteMapFilter('CAJA')" class="route-filter-btn">📦 Cajas (35)</button>
+        <button type="button" id="btnRouteFilterCasetas" onclick="setRouteMapFilter('CASETA')" class="route-filter-btn">📞 Casetas (35)</button>
+      </div>
+
+      <!-- Acciones Rápidas -->
+      <div style="display: flex; gap: 6px; align-items: center;">
+        <button type="button" onclick="toggleRouteLine()" id="btnToggleRouteLine" style="background: white; border: 1px solid #cbd5e1; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; color: #334155; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Activar/desactivar línea trazada de ruta">
+          <span>📉</span>
+          <span id="routeLineBtnText">Línea: ON</span>
+        </button>
+        <button type="button" onclick="centerRouteMapOnUser()" style="background: #0284c7; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px;" title="Centrar en mi ubicación">
+          <span>📍</span>
+          <span>Mi GPS</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Contenedor del Mapa Leaflet -->
+    <div style="flex: 1; width: 100%; position: relative; overflow: hidden; min-height: 220px;">
+      <div id="routeLeafletMap" style="width: 100%; height: 100%; z-index: 1;"></div>
+    </div>
+
+    <!-- Bandeja Inferior de Puntos del Recorrido -->
+    <div style="background: white; border-top: 2px solid #e2e8f0; display: flex; flex-direction: column; z-index: 10; flex-shrink: 0; box-shadow: 0 -4px 12px rgba(0,0,0,0.08); max-height: 190px;">
+      <div style="padding: 6px 12px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 0.78rem; font-weight: 700; color: #334155;">📍 Secuencia de Ruta (Toca un activo para enfocar):</span>
+        <span id="routeTraySummary" style="font-size: 0.72rem; color: #64748b;">35 puntos</span>
+      </div>
+      <div id="routeMapItemsList" style="overflow-y: auto; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; max-height: 150px;">
+        <!-- Elementos del recorrido inyectados dinámicamente -->
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

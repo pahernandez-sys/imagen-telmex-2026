@@ -903,3 +903,46 @@ input:focus, select:focus, textarea:focus {
 .sync-bar-btn:active {
   transform: scale(0.96);
 }
+
+
+/* ========================================================= */
+/* ESTILOS PARA EL MAPA DE RECORRIDO INTERACTIVO (35 MÁS CERCANAS) */
+/* ========================================================= */
+.route-filter-btn {
+  background: transparent;
+  color: #475569;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.route-filter-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.14);
+}
+
+.route-num-pin {
+  background: transparent !important;
+  border: none !important;
+}
+
+.user-gps-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+@keyframes pulseRadar {
+  0% { transform: scale(0.9); opacity: 0.85; }
+  50% { transform: scale(1.65); opacity: 0.2; }
+  100% { transform: scale(0.9); opacity: 0.85; }
+}
+
+.user-gps-pulse {
+  animation: pulseRadar 2s infinite ease-out;
+}
