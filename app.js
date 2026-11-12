@@ -127,193 +127,71 @@ const CAJA_MODELS = [
 // Catálogo Oficial de Estados y Áreas de Trabajo (Garantiza opciones en iPhone y offline)
 
 const OFFICIAL_ESTADOS_AREAS = {
-
   "AGUASCALIENTES": ["AGUASCALIENTES"],
-
-  "BAJA CALIFORNIA": ["ENSENADA", "MEXICALI", "TIJUANA", "TELNOR"],
-
   "BAJA CALIFORNIA SUR": ["LA PAZ"],
-
   "CHIAPAS": ["CHIAPAS"],
-
   "CHIHUAHUA": ["CHIHUAHUA", "CIUDAD JUAREZ"],
-
-  "CIUDAD DE MEXICO": ["CIUDAD DE MEXICO", "CDMX CENTRO", "CDMX NORTE", "CDMX SUR", "CDMX ORIENTE", "CDMX PONIENTE"],
-
-  "COAHUILA": ["TORREON", "SABINAS"],
-
-  "COLIMA": ["COLIMA"],
-
+  "COAHUILA": ["TORREON"],
   "DURANGO": ["DURANGO"],
-
   "ESTADO DE MEXICO": ["TOLUCA", "ESTADO DE MEXICO SUR"],
-
   "GUANAJUATO": ["CELAYA", "IRAPUATO", "LEON"],
-
   "GUERRERO": ["ACAPULCO", "CHILPANCINGO"],
-
-  "HIDALGO": ["HIDALGO"],
-
-  "JALISCO": ["JALISCO", "GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "GUADALAJARA PONIENTE", "PUERTO VALLARTA"],
-
-  "MICHOACAN": ["MICHOACAN", "MORELIA"],
-
+  "JALISCO": ["GUADALAJARA CENTRO", "GUADALAJARA ORIENTE", "JALISCO"],
+  "MICHOACAN": ["MICHOACAN-MORELIA"],
   "MORELOS": ["MORELOS"],
-
   "NAYARIT": ["NAYARIT"],
-
   "NUEVO LEON": ["MONTERREY 1", "MONTERREY 2", "MONTERREY 3"],
-
   "OAXACA": ["OAXACA"],
-
   "PUEBLA": ["PUEBLA"],
-
   "QUERETARO": ["QUERETARO"],
-
   "QUINTANA ROO": ["QUINTANA ROO NORTE", "QUINTANA ROO SUR"],
-
-  "SAN LUIS POTOSI": ["SAN LUIS POTOSI"],
-
-  "SINALOA": ["CULIACAN", "MAZATLAN"],
-
+  "SINALOA": ["CULIACAN"],
   "SONORA": ["CIUDAD OBREGON-LOS MOCH", "HERMOSILLO", "NOGALES"],
-
   "TABASCO": ["TABASCO"],
-
-  "TAMAULIPAS": ["CIUDAD VICTORIA", "MATAMOROS-REYNOSA", "NUEVO LAREDO", "TAMPICO"],
-
   "TLAXCALA": ["TLAXCALA"],
-
-  "VERACRUZ": ["COATZACOALCOS", "CORDOBA", "JALAPA", "POZA RICA", "VERACRUZ"],
-
+  "VERACRUZ": ["JALAPA", "VERACRUZ"],
   "YUCATAN": ["YUCATAN"]
-
 };
 
-
-
-// Coordenadas oficiales de respaldo por Área (Evita lat:0, lon:0 cuando el dispositivo no tiene GPS activo)
-
+// Coordenadas oficiales de respaldo por Área (37 Áreas Oficiales IASA)
 const AREA_COORDINATES_MAP = {
-
   "MORELOS": { lat: 18.9242, lon: -99.2216 },
-
   "TOLUCA": { lat: 19.2925, lon: -99.6569 },
-
   "GUADALAJARA CENTRO": { lat: 20.6767, lon: -103.3475 },
-
   "GUADALAJARA ORIENTE": { lat: 20.6550, lon: -103.2950 },
-
-  "GUADALAJARA PONIENTE": { lat: 20.6850, lon: -103.3900 },
-
   "MONTERREY 1": { lat: 25.6866, lon: -100.3161 },
-
   "MONTERREY 2": { lat: 25.7200, lon: -100.3500 },
-
   "MONTERREY 3": { lat: 25.6500, lon: -100.2800 },
-
   "QUINTANA ROO NORTE": { lat: 21.1619, lon: -86.8515 },
-
   "QUINTANA ROO SUR": { lat: 18.5002, lon: -88.2961 },
-
   "QUERETARO": { lat: 20.5888, lon: -100.3899 },
-
   "ESTADO DE MEXICO SUR": { lat: 19.1570, lon: -100.1470 },
-
   "PUEBLA": { lat: 19.0414, lon: -98.2063 },
-
   "LEON": { lat: 21.1221, lon: -101.6826 },
-
   "CIUDAD JUAREZ": { lat: 31.6904, lon: -106.4245 },
-
   "TORREON": { lat: 25.5428, lon: -103.4068 },
-
-  "HIDALGO": { lat: 20.0911, lon: -98.7624 },
-
   "NAYARIT": { lat: 21.5042, lon: -104.8946 },
-
   "CIUDAD OBREGON-LOS MOCH": { lat: 27.4864, lon: -109.9408 },
-
   "VERACRUZ": { lat: 19.1738, lon: -96.1342 },
-
-  "SAN LUIS POTOSI": { lat: 22.1565, lon: -100.9855 },
-
   "YUCATAN": { lat: 20.9674, lon: -89.5926 },
-
-  "MICHOACAN": { lat: 19.7060, lon: -101.1950 },
-
-  "MORELIA": { lat: 19.7060, lon: -101.1950 },
-
+  "MICHOACAN-MORELIA": { lat: 19.7060, lon: -101.1950 },
   "AGUASCALIENTES": { lat: 21.8853, lon: -102.2916 },
-
   "CHIAPAS": { lat: 16.7569, lon: -93.1292 },
-
   "CHIHUAHUA": { lat: 28.6330, lon: -106.0691 },
-
   "TABASCO": { lat: 17.9892, lon: -92.9281 },
-
   "CULIACAN": { lat: 24.8091, lon: -107.3940 },
-
   "ACAPULCO": { lat: 16.8531, lon: -99.8237 },
-
   "HERMOSILLO": { lat: 29.0729, lon: -110.9559 },
-
   "JALAPA": { lat: 19.5438, lon: -96.9102 },
-
-  "TAMPICO": { lat: 22.2331, lon: -97.8611 },
-
-  "QUINTANA ROO": { lat: 21.1619, lon: -86.8515 },
-
-  "QUINTANA ROO NORTE": { lat: 21.1619, lon: -86.8515 },
-
-  "QUINTANA ROO SUR": { lat: 18.5141, lon: -88.3038 },
-
-  "MATAMOROS-REYNOSA": { lat: 25.8690, lon: -97.5027 },
-
   "DURANGO": { lat: 24.0277, lon: -104.6532 },
-
   "OAXACA": { lat: 17.0732, lon: -96.7266 },
-
   "IRAPUATO": { lat: 20.6736, lon: -101.3563 },
-
-  "MAZATLAN": { lat: 23.2494, lon: -106.4111 },
-
   "CELAYA": { lat: 20.5222, lon: -100.8123 },
-
-  "PUERTO VALLARTA": { lat: 20.6534, lon: -105.2253 },
-
-  "COATZACOALCOS": { lat: 18.1353, lon: -94.4589 },
-
-  "NUEVO LAREDO": { lat: 27.4862, lon: -99.5073 },
-
-  "COLIMA": { lat: 19.2452, lon: -103.7247 },
-
   "LA PAZ": { lat: 24.1426, lon: -110.3128 },
-
   "TLAXCALA": { lat: 19.3182, lon: -98.2375 },
-
   "CHILPANCINGO": { lat: 17.5516, lon: -99.5005 },
-
-  "CIUDAD VICTORIA": { lat: 23.7417, lon: -99.1459 },
-
-  "CORDOBA": { lat: 18.8944, lon: -96.9353 },
-
   "JALISCO": { lat: 20.6767, lon: -103.3475 },
-
-  "NOGALES": { lat: 31.3086, lon: -110.9422 },
-
-  "POZA RICA": { lat: 20.5332, lon: -97.4595 },
-
-  "SABINAS": { lat: 27.8547, lon: -101.1206 },
-
-  "ENSENADA": { lat: 31.8667, lon: -116.5964 },
-
-  "MEXICALI": { lat: 32.6245, lon: -115.4523 },
-
-  "TIJUANA": { lat: 32.5149, lon: -117.0382 },
-
-  "TELNOR": { lat: 32.5149, lon: -117.0382 }
-
+  "NOGALES": { lat: 31.3086, lon: -110.9422 }
 };
 
 
@@ -2497,109 +2375,39 @@ function onSearchModeToggle() {
 
 
 function populateEstadosFilter() {
-
   const select = document.getElementById("filterEstado");
-
   if (!select) return;
 
-  
-
   const currentVal = select.value;
-
-  const estadosSet = new Set(Object.keys(OFFICIAL_ESTADOS_AREAS));
-
-  if (Array.isArray(catalog)) {
-
-    catalog.forEach(item => {
-
-      if (item.estado && item.estado !== "DESCONOCIDO" && item.estado !== "GENERAL") {
-
-        estadosSet.add(item.estado);
-
-      }
-
-    });
-
-  }
-
-
-
   select.innerHTML = '<option value="">-- Seleccionar Estado --</option>';
-
-  Array.from(estadosSet).sort().forEach(est => {
-
+  Object.keys(OFFICIAL_ESTADOS_AREAS).sort().forEach(est => {
     const opt = document.createElement("option");
-
     opt.value = est;
-
     opt.innerText = est;
-
     if (est === currentVal) opt.selected = true;
-
     select.appendChild(opt);
-
   });
-
 }
 
 
 
 function onEstadoChange() {
-
   const selectedEstado = document.getElementById("filterEstado")?.value || "";
-
   const areaSelect = document.getElementById("filterArea");
-
   if (!areaSelect) return;
-
-
 
   areaSelect.innerHTML = '<option value="">-- Seleccionar Área de Trabajo --</option>';
 
-
-
-  if (selectedEstado) {
-
-    const areasSet = new Set();
-
-    if (OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
-
-      OFFICIAL_ESTADOS_AREAS[selectedEstado].forEach(a => areasSet.add(a));
-
-    }
-
-    if (Array.isArray(catalog)) {
-
-      catalog.filter(i => i.estado === selectedEstado).forEach(i => {
-
-        if (i.area_trabajo && i.area_trabajo !== "CAMPO" && i.area_trabajo !== "GENERAL") {
-
-          areasSet.add(i.area_trabajo);
-
-        }
-
-      });
-
-    }
-
-    Array.from(areasSet).sort().forEach(area => {
-
+  if (selectedEstado && OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
+    OFFICIAL_ESTADOS_AREAS[selectedEstado].slice().sort().forEach(area => {
       const opt = document.createElement("option");
-
       opt.value = area;
-
       opt.innerText = area;
-
       areaSelect.appendChild(opt);
-
     });
-
   }
 
-
-
   applyHierarchyFilter();
-
 }
 
 
@@ -3995,115 +3803,42 @@ function selectManualModelType(modelId) {
 
 
 function populateManualEstados() {
-
   const select = document.getElementById("manualEstadoSelect");
-
   if (!select) return;
 
-
-
-  const estadosSet = new Set(Object.keys(OFFICIAL_ESTADOS_AREAS));
-
-  if (Array.isArray(catalog)) {
-
-    catalog.forEach(item => {
-
-      if (item.estado && item.estado !== "DESCONOCIDO" && item.estado !== "GENERAL") {
-
-        estadosSet.add(item.estado);
-
-      }
-
-    });
-
-  }
-
-
-
   const currentVal = select.value;
-
   select.innerHTML = '<option value="">-- Seleccionar Estado * --</option>';
-
-  Array.from(estadosSet).sort().forEach(est => {
-
+  Object.keys(OFFICIAL_ESTADOS_AREAS).sort().forEach(est => {
     const opt = document.createElement("option");
-
     opt.value = est;
-
     opt.innerText = est;
-
     if (est === currentVal) opt.selected = true;
-
     select.appendChild(opt);
-
   });
 
-
-
   const areaSelect = document.getElementById("manualAreaSelect");
-
   if (areaSelect && !areaSelect.value) {
-
     areaSelect.innerHTML = '<option value="">-- Seleccionar Área * --</option>';
-
   }
-
 }
 
 
 
 function onManualEstadoChange() {
-
   const selectedEstado = document.getElementById("manualEstadoSelect")?.value || "";
-
   const areaSelect = document.getElementById("manualAreaSelect");
-
   if (!areaSelect) return;
-
-
 
   areaSelect.innerHTML = '<option value="">-- Seleccionar Área * --</option>';
 
-
-
-  if (selectedEstado) {
-
-    const areasSet = new Set();
-
-    if (OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
-
-      OFFICIAL_ESTADOS_AREAS[selectedEstado].forEach(a => areasSet.add(a));
-
-    }
-
-    if (Array.isArray(catalog)) {
-
-      catalog.filter(i => i.estado === selectedEstado).forEach(i => {
-
-        if (i.area_trabajo && i.area_trabajo !== "CAMPO" && i.area_trabajo !== "GENERAL" && i.area_trabajo !== "DESCONOCIDO") {
-
-          areasSet.add(i.area_trabajo);
-
-        }
-
-      });
-
-    }
-
-    Array.from(areasSet).sort().forEach(area => {
-
+  if (selectedEstado && OFFICIAL_ESTADOS_AREAS[selectedEstado]) {
+    OFFICIAL_ESTADOS_AREAS[selectedEstado].slice().sort().forEach(area => {
       const opt = document.createElement("option");
-
       opt.value = area;
-
       opt.innerText = area;
-
       areaSelect.appendChild(opt);
-
     });
-
   }
-
 }
 
 
