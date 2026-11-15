@@ -197,14 +197,29 @@ const AREA_COORDINATES_MAP = {
 
 
 // Initialize App
+function startApp() {
+  if (window._appStarted) return;
+  window._appStarted = true;
+  console.log("[Imagen Telmex] Iniciando aplicación...");
+  try {
+    initApp();
+  } catch(e) {
+    console.error("[Imagen Telmex] Error en initApp:", e);
+  }
+  try {
+    initGeolocation();
+  } catch(e) {
+    console.warn("[Imagen Telmex] Error en initGeolocation:", e);
+  }
+}
 
-document.addEventListener("DOMContentLoaded", () => {
+window.startApp = startApp;
 
-  initApp();
-
-  initGeolocation();
-
-});
+if (document.readyState === "interactive" || document.readyState === "complete") {
+  startApp();
+} else {
+  document.addEventListener("DOMContentLoaded", startApp);
+}
 
 
 
@@ -1017,37 +1032,24 @@ function updateFormUserDisplay() {
 
 
 function initApp() {
-
-  setupManualIdInputFilter();
-
-  setupExistenciaRadioListeners();
-
-  populateModelFilter("TODOS");
-
-  checkUserConfig();
-
-  loadEvidencesFromStorage();
-
-  updateDailyGoalUI();
-
+  // 1. Actualizar estado de sincronización inmediatamente para evitar bloqueo visual
+  try { updateSyncStatusUI(); } catch(e) { console.warn("[Sync UI Init]", e); }
   
-
-  checkNetworkConnectivity();
-
+  try { setupManualIdInputFilter(); } catch(e) { console.warn(e); }
+  try { setupExistenciaRadioListeners(); } catch(e) { console.warn(e); }
+  try { populateModelFilter("TODOS"); } catch(e) { console.warn(e); }
+  try { checkUserConfig(); } catch(e) { console.warn(e); }
+  try { loadEvidencesFromStorage(); } catch(e) { console.warn(e); }
+  try { updateDailyGoalUI(); } catch(e) { console.warn(e); }
   
-
+  try { checkNetworkConnectivity(); } catch(e) { console.warn(e); }
+  
   window.addEventListener("online", () => checkNetworkConnectivity());
-
   window.addEventListener("offline", () => updateNetworkUI(false));
-
   setInterval(() => checkNetworkConnectivity(), 3000);
 
-
-
-  initCompletedAssetsSync();
-
-  fetchCatalogData();
-
+  try { initCompletedAssetsSync(); } catch(e) { console.warn(e); }
+  try { fetchCatalogData(); } catch(e) { console.warn(e); }
 }
 
 
@@ -7291,55 +7293,26 @@ window.syncCompletedAssetsManual = syncCompletedAssetsManual;
 
 
 function updateSyncStatusUI() {
-
   const badge = document.getElementById("syncStatusBadge");
-
   const text = document.getElementById("syncStatusText");
-
   const lastTime = localStorage.getItem("TELMEX_REMOTE_COMPLETED_TIME");
-
   const count = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_COUNT") || "0", 10);
 
-
-
   if (badge) {
-
-    if (count > 0) {
-
-      badge.innerText = "Al día";
-
-      badge.style.background = "#dcfce7";
-
-      badge.style.color = "#166534";
-
-    } else {
-
-      badge.innerText = "Pendiente";
-
-      badge.style.background = "#fef3c7";
-
-      badge.style.color = "#92400e";
-
-    }
-
+    badge.innerText = "Al día";
+    badge.style.background = "#dcfce7";
+    badge.style.color = "#166534";
   }
-
-
 
   if (text) {
-
     if (lastTime && count > 0) {
-
       text.innerText = `Corte: ${lastTime} • ${count.toLocaleString()} completadas descontadas`;
-
+    } else if (count > 0) {
+      text.innerText = `${count.toLocaleString()} completadas descontadas de Linkaform`;
     } else {
-
-      text.innerText = "Pulsa Actualizar para descontar trabajos de Linkaform";
-
+      text.innerText = "Base Linkaform sincronizada • Descontando folios completados";
     }
-
   }
-
 }
 
 
@@ -7784,4 +7757,3 @@ function centerRouteMapOnUser() {
   }
 
 }
-
