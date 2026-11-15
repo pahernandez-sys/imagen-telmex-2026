@@ -4656,8 +4656,7 @@ function saveEvidence(event) {
   const timestamp = new Date().toISOString();
 
   const uniqueId = selectedAsset.unique_id || generateUniqueId(tipoElemento, areaVal);
-
-  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
+  // isManualAsset ya fue declarado arriba al inicio de saveEvidence
 
 
 
