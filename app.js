@@ -38,6 +38,17 @@ let userContratista = "";
 
 let userTecnico = "";
 
+// =========================================================
+// DISTRITOS RESTRINGIDOS (SUPERVISIÓN Y NORMATIVIDAD TELMEX)
+// =========================================================
+const RESTRICTED_DISTRICTS = new Set(["PIX0001", "PIX0002", "PIX0003"]);
+
+function isRestrictedDistrict(id) {
+  if (!id) return false;
+  return RESTRICTED_DISTRICTS.has(String(id).trim().toUpperCase());
+}
+
+
 
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
@@ -197,29 +208,14 @@ const AREA_COORDINATES_MAP = {
 
 
 // Initialize App
-function startApp() {
-  if (window._appStarted) return;
-  window._appStarted = true;
-  console.log("[Imagen Telmex] Iniciando aplicación...");
-  try {
-    initApp();
-  } catch(e) {
-    console.error("[Imagen Telmex] Error en initApp:", e);
-  }
-  try {
-    initGeolocation();
-  } catch(e) {
-    console.warn("[Imagen Telmex] Error en initGeolocation:", e);
-  }
-}
 
-window.startApp = startApp;
+document.addEventListener("DOMContentLoaded", () => {
 
-if (document.readyState === "interactive" || document.readyState === "complete") {
-  startApp();
-} else {
-  document.addEventListener("DOMContentLoaded", startApp);
-}
+  initApp();
+
+  initGeolocation();
+
+});
 
 
 
@@ -1032,24 +1028,37 @@ function updateFormUserDisplay() {
 
 
 function initApp() {
-  // 1. Actualizar estado de sincronización inmediatamente para evitar bloqueo visual
-  try { updateSyncStatusUI(); } catch(e) { console.warn("[Sync UI Init]", e); }
+
+  setupManualIdInputFilter();
+
+  setupExistenciaRadioListeners();
+
+  populateModelFilter("TODOS");
+
+  checkUserConfig();
+
+  loadEvidencesFromStorage();
+
+  updateDailyGoalUI();
+
   
-  try { setupManualIdInputFilter(); } catch(e) { console.warn(e); }
-  try { setupExistenciaRadioListeners(); } catch(e) { console.warn(e); }
-  try { populateModelFilter("TODOS"); } catch(e) { console.warn(e); }
-  try { checkUserConfig(); } catch(e) { console.warn(e); }
-  try { loadEvidencesFromStorage(); } catch(e) { console.warn(e); }
-  try { updateDailyGoalUI(); } catch(e) { console.warn(e); }
+
+  checkNetworkConnectivity();
+
   
-  try { checkNetworkConnectivity(); } catch(e) { console.warn(e); }
-  
+
   window.addEventListener("online", () => checkNetworkConnectivity());
+
   window.addEventListener("offline", () => updateNetworkUI(false));
+
   setInterval(() => checkNetworkConnectivity(), 3000);
 
-  try { initCompletedAssetsSync(); } catch(e) { console.warn(e); }
-  try { fetchCatalogData(); } catch(e) { console.warn(e); }
+
+
+  initCompletedAssetsSync();
+
+  fetchCatalogData();
+
 }
 
 
@@ -1274,6 +1283,10 @@ function loadCatalogViaScript() {
 
 function onCatalogLoaded() {
 
+  if (Array.isArray(catalog)) {
+    catalog = catalog.filter(item => !isRestrictedDistrict(item && item.id));
+  }
+
   updateCatalogCountBadge();
 
   populateModelFilter("TODOS");
@@ -1303,6 +1316,8 @@ function updateCatalogCountBadge() {
   const availableCount = catalog.filter(item => {
 
     const id = String(item.id || "").trim().toUpperCase();
+
+    if (isRestrictedDistrict(id)) return false;
 
     return !completedIds.has(id);
 
@@ -2468,6 +2483,8 @@ function applyHierarchyFilter() {
 
     const itemId = String(item.id || "").trim().toUpperCase();
 
+    if (isRestrictedDistrict(itemId)) return false;
+
     const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
 
     if (completedAssetIds.has(itemId) || (itemUid && completedAssetIds.has(itemUid))) return false;
@@ -2590,6 +2607,8 @@ function onQueryInput() {
   let matches = catalog.filter(item => {
 
     const itemId = String(item.id || "").trim().toUpperCase();
+
+    if (isRestrictedDistrict(itemId)) return false;
 
     const itemUid = item.unique_id ? String(item.unique_id).trim().toUpperCase() : "";
 
@@ -3230,6 +3249,11 @@ function renderSearchResults(items, isGpsSearch, completedCount = 0) {
 
 
 function selectAsset(item) {
+
+  if (!item || isRestrictedDistrict(item.id)) {
+    showCustomAlert(`🚫 El distrito ${item ? item.id : ''} está restringido por supervisión y no puede ser seleccionado ni trabajado.`, "Distrito Restringido");
+    return;
+  }
 
   pendingAsset = item;
 
@@ -3874,6 +3898,22 @@ function confirmManualAssetSelection() {
 
 
 
+  // Restricción de Distritos No Permitidos
+  if (isRestrictedDistrict(rawId)) {
+    showCustomAlert(
+      `🚫 <strong>Distrito Restringido:</strong><br><br>` +
+      `El distrito <strong>${rawId}</strong> está restringido por normatividad y supervisión de Telmex.<br><br>` +
+      `No está permitido crear, dar de alta ni registrar evidencias en este distrito.`,
+      "Distrito No Permitido"
+    );
+    if (idInput) {
+      idInput.style.border = "2px solid #ef4444";
+      idInput.value = "";
+      idInput.focus();
+    }
+    return;
+  }
+
   // Validación de Duplicado en Base Linkaform
 
   const allCompletedAssetIds = getCompletedAssetIdsSet();
@@ -4360,6 +4400,17 @@ function saveEvidence(event) {
 
 
 
+  // 3.0.0 Restricción de Distritos No Permitidos
+  if (isRestrictedDistrict(assetId)) {
+    showCustomAlert(
+      `🚫 <strong>Distrito Restringido:</strong><br><br>` +
+      `El distrito <strong>${assetId}</strong> se encuentra restringido por normativa y supervisión de Telmex.<br><br>` +
+      `No está permitido crear ni guardar evidencias para este distrito.`,
+      "Distrito No Permitido"
+    );
+    return false;
+  }
+
   // 3.0 Validación estricta V8 si es activo manual
 
   if (selectedAsset.is_manual) {
@@ -4493,21 +4544,16 @@ function saveEvidence(event) {
 
 
   // 8. Validar Calle / Dirección
-  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
-  let calleVal = (selectedAsset.calle || "").trim();
 
-  if (isManualAsset) {
-    if (!calleVal || calleVal.toUpperCase() === "S/N") {
-      showCustomAlert("⚠️ <strong>Calle / Ubicación Obligatoria:</strong><br><br>Para activos fuera de catálogo, debes proporcionar la calle o referencia física de la ubicación.", "Ubicación Requerida");
-      return false;
-    }
-  } else {
-    // Activo oficial de catálogo: en la BD de Telmex muchas cajas/casetas no tienen calle registrada (calle: null)
-    if (!calleVal || calleVal.toUpperCase() === "S/N") {
-      calleVal = selectedAsset.colonia || selectedAsset.municipio || "S/N";
-    }
+  const calleVal = (selectedAsset.calle || "").trim();
+
+  if (!calleVal || (calleVal === "S/N" && selectedAsset.is_manual)) {
+
+    showCustomAlert("⚠️ <strong>Calle / Ubicación Obligatoria:</strong><br><br>Debes proporcionar la calle o referencia física de la ubicación del activo.", "Ubicación Requerida");
+
+    return false;
+
   }
-  selectedAsset.calle = calleVal;
 
 
 
@@ -4656,7 +4702,8 @@ function saveEvidence(event) {
   const timestamp = new Date().toISOString();
 
   const uniqueId = selectedAsset.unique_id || generateUniqueId(tipoElemento, areaVal);
-  // isManualAsset ya fue declarado arriba al inicio de saveEvidence
+
+  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
 
 
 
@@ -5913,6 +5960,11 @@ async function syncAllToLinkaform() {
     const asset_id = String(ev.asset_id || "S/N");
 
     const unique_id = String(ev.unique_id || asset_id);
+
+    if (isRestrictedDistrict(asset_id)) {
+      console.warn(`[Restricción Telmex] Distrito restringido detectado: ${asset_id}. Omitiendo envío.`);
+      continue;
+    }
 
 
 
@@ -7292,26 +7344,55 @@ window.syncCompletedAssetsManual = syncCompletedAssetsManual;
 
 
 function updateSyncStatusUI() {
+
   const badge = document.getElementById("syncStatusBadge");
+
   const text = document.getElementById("syncStatusText");
+
   const lastTime = localStorage.getItem("TELMEX_REMOTE_COMPLETED_TIME");
+
   const count = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_COUNT") || "0", 10);
 
+
+
   if (badge) {
-    badge.innerText = "Al día";
-    badge.style.background = "#dcfce7";
-    badge.style.color = "#166534";
+
+    if (count > 0) {
+
+      badge.innerText = "Al día";
+
+      badge.style.background = "#dcfce7";
+
+      badge.style.color = "#166534";
+
+    } else {
+
+      badge.innerText = "Pendiente";
+
+      badge.style.background = "#fef3c7";
+
+      badge.style.color = "#92400e";
+
+    }
+
   }
 
+
+
   if (text) {
+
     if (lastTime && count > 0) {
+
       text.innerText = `Corte: ${lastTime} • ${count.toLocaleString()} completadas descontadas`;
-    } else if (count > 0) {
-      text.innerText = `${count.toLocaleString()} completadas descontadas de Linkaform`;
+
     } else {
-      text.innerText = "Base Linkaform sincronizada • Descontando folios completados";
+
+      text.innerText = "Pulsa Actualizar para descontar trabajos de Linkaform";
+
     }
+
   }
+
 }
 
 
@@ -7679,6 +7760,11 @@ function selectAssetFromRouteMap(assetId) {
 
   closeRouteMapModal();
 
+  if (isRestrictedDistrict(assetId)) {
+    showCustomAlert(`🚫 El distrito ${assetId} está restringido por supervisión y no puede ser seleccionado.`, "Distrito Restringido");
+    return;
+  }
+
   let found = null;
 
   if (typeof catalog !== 'undefined' && Array.isArray(catalog)) {
@@ -7756,3 +7842,4 @@ function centerRouteMapOnUser() {
   }
 
 }
+

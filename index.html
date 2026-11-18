@@ -17,26 +17,6 @@
       });
     }
   </script>
-  <script>
-    // Watchdog de Arranque: Detecta errores o congelamiento y ofrece recuperación con 1 clic
-    window.addEventListener("error", function(e) {
-      if (!window._appStarted) {
-        var b = document.getElementById("startupRecoveryBanner");
-        var errEl = document.getElementById("startupRecoveryError");
-        if (b) b.style.display = "block";
-        if (errEl) errEl.innerText = e.message || "Inconsistencia detectada";
-      }
-    });
-    setTimeout(function() {
-      if (!window._appStarted) {
-        var net = document.getElementById("networkStatus");
-        if (net && net.innerText === "Modo Local") {
-          var b = document.getElementById("startupRecoveryBanner");
-          if (b) b.style.display = "block";
-        }
-      }
-    }, 4000);
-  </script>
 </head>
 <body>
 
@@ -56,18 +36,6 @@
       </div>
     </div>
   </header>
-
-  <!-- Banner Asistente de Recuperación Automática -->
-  <div id="startupRecoveryBanner" style="display:none; background:#fef2f2; border:2px solid #ef4444; border-radius:10px; padding:12px 14px; margin:12px auto; max-width:600px; color:#991b1b; box-shadow:0 4px 12px rgba(239,68,68,0.15);">
-    <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
-      <span style="font-weight:700; font-size:0.9rem;">⚠️ Asistente de Recuperación del Sistema</span>
-      <button type="button" onclick="forceAppUpdate()" style="background:#ef4444; color:white; border:none; padding:6px 12px; border-radius:6px; font-weight:700; font-size:0.8rem; cursor:pointer;">Restaurar App</button>
-    </div>
-    <div style="font-size:0.78rem; margin-top:6px; line-height:1.4; color:#7f1d1d;">
-      Se detectó una pausa en la carga inicial. Pulsa <strong>Restaurar App</strong> para purgar la caché y recargar la versión limpia de inmediato.
-    </div>
-    <div id="startupRecoveryError" style="font-size:0.72rem; margin-top:4px; font-family:monospace; color:#b91c1c;"></div>
-  </div>
 
   <main class="container">
 
@@ -112,7 +80,7 @@
             <span id="syncStatusBadge" style="font-size: 0.7rem; font-weight: 600; padding: 1px 7px; border-radius: 10px; background: #dcfce7; color: #166534;">Sincronizado</span>
           </div>
           <div id="syncStatusText" style="font-size: 0.74rem; color: #64748b;">
-            Base Linkaform sincronizada • Listo
+            Cargando estado de la base...
           </div>
         </div>
         <button type="button" id="btnSyncCompletedAssets" class="sync-bar-btn" onclick="syncCompletedAssetsManual()" title="Descargar lista de cajas y casetas completadas en Linkaform para ocultarlas">
@@ -732,8 +700,7 @@
   <script src="data/catalog_part2.js?v=10"></script>
 
   <!-- Lógica de la PWA (Carga asíncrona de datos para 0 latencia) -->
-  <script src="app.js?v=9.5"></script>
-  <script>if (typeof startApp === "function") startApp();</script>
+  <script src="app.js?v=9.2"></script>
 
   <!-- ==================== MODAL MAPA DE RECORRIDO INTERACTIVO (35 MÁS CERCANAS) ==================== -->
   <div id="routeMapModal" style="display: none; position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(4px); flex-direction: column; height: 100vh; height: 100dvh; max-height: 100vh;">
