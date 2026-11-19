@@ -53,9 +53,9 @@ function isRestrictedDistrict(id) {
 
 // Versión del Sistema para Auditoría Linkaform (Automática para Campo)
 
-const CURRENT_APP_VERSION_ANDROID = "v9 - Android";
+const CURRENT_APP_VERSION_ANDROID = "v10 - Android";
 
-const CURRENT_APP_VERSION_IPHONE = "v9 - IPhone";
+const CURRENT_APP_VERSION_IPHONE = "v10 - IPhone";
 
 
 
@@ -6330,7 +6330,7 @@ async function syncAllToLinkaform() {
         ));
 
         if (isVersionRejected) {
-          lastErrorMessage = "⚠️ La versión de tu aplicación ya no está autorizada en Linkaform. Por favor actualiza a la versión 9 (v9) para poder enviar tus evidencias.";
+          lastErrorMessage = "⚠️ La versión de tu aplicación ya no está autorizada en Linkaform. Por favor actualiza a la versión 10 (v10) para poder enviar tus evidencias.";
         } else {
           lastErrorMessage = `Respuesta Linkaform (HTTP ${response.status}): ${resText.substring(0, 100)}`;
         }
@@ -7043,7 +7043,7 @@ function takeSnapshot() {
 
 function forceAppUpdate() {
 
-  if (confirm("¿Deseas actualizar la aplicación a la versión v9 y limpiar la memoria caché?")) {
+  if (confirm("¿Deseas actualizar la aplicación a la versión v10 y limpiar la memoria caché?")) {
 
     if ('serviceWorker' in navigator) {
 
