@@ -4544,16 +4544,21 @@ function saveEvidence(event) {
 
 
   // 8. Validar Calle / Dirección
+  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
+  let calleVal = (selectedAsset.calle || "").trim();
 
-  const calleVal = (selectedAsset.calle || "").trim();
-
-  if (!calleVal || (calleVal === "S/N" && selectedAsset.is_manual)) {
-
-    showCustomAlert("⚠️ <strong>Calle / Ubicación Obligatoria:</strong><br><br>Debes proporcionar la calle o referencia física de la ubicación del activo.", "Ubicación Requerida");
-
-    return false;
-
+  if (isManualAsset) {
+    if (!calleVal || calleVal.toUpperCase() === "S/N") {
+      showCustomAlert("⚠️ <strong>Calle / Ubicación Obligatoria:</strong><br><br>Para activos fuera de catálogo, debes proporcionar la calle o referencia física de la ubicación.", "Ubicación Requerida");
+      return false;
+    }
+  } else {
+    // Activo oficial de catálogo: en la BD de Telmex muchas cajas/casetas no tienen calle registrada (calle: null)
+    if (!calleVal || calleVal.toUpperCase() === "S/N") {
+      calleVal = selectedAsset.colonia || selectedAsset.municipio || selectedAsset.area_trabajo || "S/N";
+    }
   }
+  selectedAsset.calle = calleVal;
 
 
 
@@ -4702,8 +4707,6 @@ function saveEvidence(event) {
   const timestamp = new Date().toISOString();
 
   const uniqueId = selectedAsset.unique_id || generateUniqueId(tipoElemento, areaVal);
-
-  const isManualAsset = selectedAsset.is_manual === true || selectedAsset.is_fuera_catalogo === true || selectedAsset.existe_en_bd === "No";
 
 
 
