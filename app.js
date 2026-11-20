@@ -3412,10 +3412,13 @@ function confirmAssetSelection() {
 
 
   // Actualizar alerta general de activo seleccionado
+  const cleanAssetRef = String(selectedAsset.id || "").trim().toUpperCase();
+  const isAlreadyInLote = Array.isArray(dbEvidences) && dbEvidences.some(ev => String(ev.asset_id || "").trim().toUpperCase() === cleanAssetRef);
+  const loteNotice = isAlreadyInLote ? " ⚠️ (Ya está en tu lote - Guardar te permitirá reemplazar)" : "";
 
   document.getElementById("activeAssetAlert").style.display = "block";
 
-  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${modalSelectedModel}) - ${areaVal}, ${selectedAsset.estado}`;
+  document.getElementById("activeAssetTitle").innerText = `${uniqueId} (Ref: ${selectedAsset.id}) [${proceso}] (${selectedAsset.tipo} - ${modalSelectedModel}) - ${areaVal}, ${selectedAsset.estado}${loteNotice}`;
 
 
 
@@ -4437,28 +4440,17 @@ function saveEvidence(event) {
 
 
 
-  // 3.1 Prevenir Duplicados: Verificar si ya existe en el lote pendiente o ya fue completado
+  // 3.1 Prevenir Duplicados si ya fue confirmado previamente en Linkaform
+  const existingBatchIdx = Array.isArray(dbEvidences) 
+    ? dbEvidences.findIndex(ev => String(ev.asset_id || "").trim().toUpperCase() === assetId) 
+    : -1;
 
-  const alreadyInBatch = Array.isArray(dbEvidences) && dbEvidences.some(ev => String(ev.asset_id || "").trim().toUpperCase() === assetId);
-
-  if (alreadyInBatch) {
-
-    showCustomAlert(`⚠️ <strong>Activo Ya Registrado en tu Lote:</strong><br><br>El activo <strong>${assetId}</strong> ya se encuentra guardado en este teléfono en la lista de evidencias pendientes.<br><br>No es necesario capturarlo dos veces.`, "Activo Duplicado");
-
-    return false;
-
-  }
-
-
-
-  const alreadyCompleted = completedAssetIdsSet && completedAssetIdsSet.has(assetId);
-
-  if (alreadyCompleted) {
-
-    showCustomAlert(`⚠️ <strong>Activo Ya Completado Previamente:</strong><br><br>El activo <strong>${assetId}</strong> ya fue registrado y confirmado exitosamente con anterioridad.<br><br>Para evitar duplicar registros en Linkaform, no está permitido recapturarlo.`, "Activo Ya Completado");
-
-    return false;
-
+  if (existingBatchIdx === -1) {
+    const completedIds = getCompletedAssetIdsSet();
+    if (completedIds && completedIds.has(assetId)) {
+      showCustomAlert(`⚠️ <strong>Activo Ya Completado Previamente:</strong><br><br>El activo <strong>${assetId}</strong> ya fue registrado y confirmado exitosamente en Linkaform con anterioridad.<br><br>Para evitar duplicar registros en Linkaform, no está permitido recapturarlo.`, "Activo Ya Completado");
+      return false;
+    }
   }
 
 
@@ -4782,6 +4774,37 @@ function saveEvidence(event) {
 
 
 
+  if (existingBatchIdx !== -1) {
+    showCustomConfirm(
+      `⚠️ <strong>Activo Ya Registrado en tu Lote:</strong><br><br>` +
+      `El activo <strong>${assetId}</strong> ya se encuentra guardado en este teléfono en tu lista de evidencias pendientes.<br><br>` +
+      `¿Deseas <strong>reemplazar y actualizar</strong> la evidencia anterior con esta nueva foto y datos?`,
+      "Activo Ya en tu Lote",
+      () => {
+        dbEvidences[existingBatchIdx] = evidenceRecord;
+        markAssetCompletedPermanently(evidenceRecord.asset_id, evidenceRecord.unique_id);
+        saveEvidencesToStorage();
+        showCustomAlert(
+          `✅ <strong>Evidencia actualizada en tu lote:</strong><br><br>` +
+          `<strong>Folio:</strong> ${uniqueId}<br>` +
+          `<strong>ID / Ref:</strong> ${assetId}<br>` +
+          `<strong>Estado / Área:</strong> ${estadoVal} - ${areaVal}<br>` +
+          `<strong>Foto:</strong> Actualizada ✔<br><br>` +
+          `El registro fue actualizado exitosamente en tus evidencias pendientes de envío.`,
+          "Evidencia Actualizada"
+        );
+        resetEvidenceFormFields();
+        applyHierarchyFilter();
+        switchView('sync');
+      },
+      null,
+      "🔄 Sí, Reemplazar",
+      "Cancelar",
+      "#0284c7"
+    );
+    return false;
+  }
+
   dbEvidences.push(evidenceRecord);
 
   markAssetCompletedPermanently(evidenceRecord.asset_id, evidenceRecord.unique_id);
@@ -4794,63 +4817,48 @@ function saveEvidence(event) {
 
 
 
-  // Reset Form y Activo Seleccionado
-
-  selectedAsset = null;
-
-  document.getElementById("activeAssetAlert").style.display = "none";
-
-  document.getElementById("formAssetId").value = "";
-
-  document.getElementById("formAssetEstado").value = "";
-
-  document.getElementById("formAssetArea").value = "";
-
-  const resetBdEl = document.getElementById("formAssetExisteBD");
-
-  if (resetBdEl) resetBdEl.value = "";
-
-  document.getElementById("formAssetInfo").value = "";
-
-  document.getElementById("evidenceForm").reset();
-
-  document.querySelectorAll('input[name="existencia"]').forEach(r => r.checked = false);
-
-  const ofertaResetEl = document.getElementById("ofertaColocada");
-
-  if (ofertaResetEl) ofertaResetEl.value = "200 MB";
-
-  const comSelReset = document.getElementById("comentarios");
-
-  if (comSelReset) comSelReset.value = "Sin comentarios";
-
-  const comManReset = document.getElementById("comentariosManual");
-
-  if (comManReset) { comManReset.style.display = "none"; comManReset.value = ""; }
-
-  const grpExist4 = document.getElementById("groupExistencia");
-
-  if (grpExist4) { grpExist4.style.border = "none"; grpExist4.style.padding = "0"; }
-
-  photoDespuesBase64 = "";
-
-  document.getElementById("previewDespues").style.display = "none";
-
-  document.getElementById("iconDespues").style.display = "block";
-
-  document.getElementById("labelDespues").innerText = "Sin foto";
-
-
-
-  // Refrescar lista de búsqueda para ocultar automáticamente el activo capturado
+  resetEvidenceFormFields();
 
   applyHierarchyFilter();
-
-
 
   switchView('sync');
 
   return true;
+
+}
+
+function resetEvidenceFormFields() {
+  selectedAsset = null;
+  const alertEl = document.getElementById("activeAssetAlert");
+  if (alertEl) alertEl.style.display = "none";
+  const idEl = document.getElementById("formAssetId");
+  if (idEl) idEl.value = "";
+  const estEl = document.getElementById("formAssetEstado");
+  if (estEl) estEl.value = "";
+  const areaEl = document.getElementById("formAssetArea");
+  if (areaEl) areaEl.value = "";
+  const resetBdEl = document.getElementById("formAssetExisteBD");
+  if (resetBdEl) resetBdEl.value = "";
+  const infoEl = document.getElementById("formAssetInfo");
+  if (infoEl) infoEl.value = "";
+  const formEl = document.getElementById("evidenceForm");
+  if (formEl) formEl.reset();
+  document.querySelectorAll('input[name="existencia"]').forEach(r => r.checked = false);
+  const ofertaResetEl = document.getElementById("ofertaColocada");
+  if (ofertaResetEl) ofertaResetEl.value = "200 MB";
+  const comSelReset = document.getElementById("comentarios");
+  if (comSelReset) comSelReset.value = "Sin comentarios";
+  const comManReset = document.getElementById("comentariosManual");
+  if (comManReset) { comManReset.style.display = "none"; comManReset.value = ""; }
+  const grpExist4 = document.getElementById("groupExistencia");
+  if (grpExist4) { grpExist4.style.border = "none"; grpExist4.style.padding = "0"; }
+  photoDespuesBase64 = "";
+  const prevEl = document.getElementById("previewDespues");
+  if (prevEl) prevEl.style.display = "none";
+  const iconEl = document.getElementById("iconDespues");
+  if (iconEl) iconEl.style.display = "block";
+  const lblEl = document.getElementById("labelDespues");
+  if (lblEl) lblEl.innerText = "Sin foto";
 
 }
 
@@ -5450,6 +5458,17 @@ function renderSavedEvidences() {
 
   if (!container) return;
 
+  const pausedCount = Array.isArray(dbEvidences) ? dbEvidences.filter(ev => ev.omitir_sync || ev.is_duplicate_linkaform).length : 0;
+  const btnClearDuplicates = document.getElementById("btnClearDuplicates");
+  if (btnClearDuplicates) {
+    if (pausedCount > 0) {
+      btnClearDuplicates.style.display = "block";
+      btnClearDuplicates.innerText = `🗑️ Limpiar ${pausedCount} Registro(s) Ya en Linkaform (Pausados)`;
+    } else {
+      btnClearDuplicates.style.display = "none";
+    }
+  }
+
   container.innerHTML = "";
 
 
@@ -5647,6 +5666,33 @@ function toggleOmitirSync(idx) {
 }
 
 window.toggleOmitirSync = toggleOmitirSync;
+
+function clearPausedOrDuplicateEvidences() {
+  const pausedList = Array.isArray(dbEvidences) ? dbEvidences.filter(ev => ev.omitir_sync || ev.is_duplicate_linkaform) : [];
+  if (pausedList.length === 0) {
+    showCustomAlert("No hay registros duplicados o pausados en tu lote.", "Lote Limpio");
+    return;
+  }
+  showCustomConfirm(
+    `¿Deseas eliminar del teléfono los <strong>${pausedList.length} registros</strong> que ya existen confirmados en Linkaform?<br><br><small style="color:#64748b;">Esta acción liberará espacio de almacenamiento en el teléfono de forma segura, ya que estas evidencias ya están registradas en el sistema de Telmex/Linkaform.</small>`,
+    "Limpiar Registros Ya en Linkaform",
+    async () => {
+      dbEvidences = dbEvidences.filter(ev => !ev.omitir_sync && !ev.is_duplicate_linkaform);
+      await saveEvidencesToStorage();
+      renderSavedEvidences();
+      updateSyncBadges();
+      updateDailyGoalUI();
+      applyHierarchyFilter();
+      showCustomAlert(`✅ Se eliminaron exitosamente <strong>${pausedList.length} registros duplicados/pausados</strong> de este teléfono.`, "Lote Limpio");
+    },
+    null,
+    "🗑️ Sí, Eliminar",
+    "Cancelar",
+    "#dc2626"
+  );
+}
+
+window.clearPausedOrDuplicateEvidences = clearPausedOrDuplicateEvidences;
 
 
 
@@ -5856,6 +5902,19 @@ async function syncAllToLinkaform() {
 
     return;
 
+  }
+
+  const activeEvidencesToSync = dbEvidences.filter(ev => !ev.omitir_sync && !isRestrictedDistrict(String(ev.asset_id || "S/N")));
+  const pausedEvidencesCount = dbEvidences.filter(ev => ev.omitir_sync || ev.is_duplicate_linkaform).length;
+
+  if (activeEvidencesToSync.length === 0 && pausedEvidencesCount > 0) {
+    showCustomAlert(
+      `ℹ️ <strong>Registros Ya en Linkaform (Pausados):</strong><br><br>` +
+      `Los <strong>${pausedEvidencesCount} registros</strong> en tu lote ya fueron registrados previamente en Linkaform y se encuentran en pausa.<br><br>` +
+      `No es necesario volver a enviarlos. Si deseas liberar espacio en tu teléfono, puedes presionar el botón rojo <strong>"🗑️ Limpiar Registros Ya en Linkaform"</strong>.`,
+      "Lote Ya Registrado"
+    );
+    return;
   }
 
 
@@ -6506,16 +6565,15 @@ async function syncAllToLinkaform() {
 
       } else {
 
+        const pausedNote = pausedEvidencesCount > 0 
+          ? `<br><br>ℹ️ <em>Nota: Tienes ${pausedEvidencesCount} registro(s) pausados porque ya existen en Linkaform.</em>`
+          : "";
+        const errDetail = lastErrorMessage || (pausedEvidencesCount === remainingEvidences.length ? "Todos los registros restantes ya están registrados en Linkaform y se encuentran en pausa." : "Error desconocido");
         showCustomAlert(
-
           `❌ <strong>No se pudo confirmar ningún registro en Linkaform:</strong><br><br>` +
-
-          `Los <strong>${remainingEvidences.length} registros</strong> se conservaron en el teléfono para que no se pierda nada.<br><br>` +
-
-          `<strong>Detalle del error:</strong><br><small>${lastErrorMessage || "Error desconocido"}</small>`,
-
+          `Los <strong>${remainingEvidences.length} registros</strong> se conservaron en el teléfono para que no se pierda nada.${pausedNote}<br><br>` +
+          `<strong>Detalle del error:</strong><br><small>${errDetail}</small>`,
           "Error de Envío"
-
         );
 
       }
