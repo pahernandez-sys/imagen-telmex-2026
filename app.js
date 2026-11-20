@@ -7109,21 +7109,35 @@ function initCompletedAssetsSync() {
 
 
 
-  // Auto-sincronizar al iniciar si hay internet y pasaron > 2 hrs desde la última sync
-
+  // Auto-sincronizar al iniciar si hay internet y pasaron > 5 min desde la última sync
   const lastSyncTs = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_TS") || "0", 10);
+  const minutesSinceSync = (Date.now() - lastSyncTs) / (1000 * 60);
 
-  const hoursSinceSync = (Date.now() - lastSyncTs) / (1000 * 60 * 60);
-
-  if (navigator.onLine && (hoursSinceSync > 2 || lastSyncTs === 0)) {
-
+  if (navigator.onLine && (minutesSinceSync > 5 || lastSyncTs === 0)) {
     setTimeout(() => {
-
       fetchCompletedAssets({ silent: true });
-
-    }, 2000);
-
+    }, 1500);
   }
+
+  // Sincronización proactiva periódica cada 8-10 minutos en segundo plano si está en línea
+  setInterval(() => {
+    if (navigator.onLine && !isSyncingCompletedAssets) {
+      const ts = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_TS") || "0", 10);
+      if ((Date.now() - ts) / (1000 * 60) > 8) {
+        fetchCompletedAssets({ silent: true });
+      }
+    }
+  }, 60000);
+
+  // Sincronización proactiva al volver al primer plano (desbloqueo de iPhone / celular o cambio de pestaña)
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && navigator.onLine && !isSyncingCompletedAssets) {
+      const ts = parseInt(localStorage.getItem("TELMEX_REMOTE_COMPLETED_TS") || "0", 10);
+      if ((Date.now() - ts) / (1000 * 60) > 5) {
+        fetchCompletedAssets({ silent: true });
+      }
+    }
+  });
 
 }
 
